@@ -16,10 +16,10 @@ DOWN = 0
 RIGHT = 1
 UP = 2
 LEFT = 3
-transition_function = {DOWN: [0.6,0.3,0.0,0.1],
-                       RIGHT: [0.1,0.8,0.1,0.0],
-                       UP: [0.0,0.1,0.8,0.1],
-                       LEFT: [0.1,0.0,0.1,0.8]}
+transition_function = {DOWN: [0.6, 0.2, 0.0, 0.2],
+                       RIGHT: [0.1, 0.8, 0.1, 0.0],
+                       UP: [0.0, 0.1, 0.8, 0.1],
+                       LEFT: [0.1, 0.0, 0.1, 0.8]}
 
 class FrozenLakeEnv(Env):
     """
@@ -102,6 +102,8 @@ class FrozenLakeEnv(Env):
         """
         a = np.random.choice([DOWN, RIGHT, UP, LEFT], p=transition_function[a])
         newstate, cost, terminated = self.P[self.s][a]
+        # print(self.P)
+        # exit(1)
         self.s = newstate
         self.lastaction = a
         return (int(newstate), cost, terminated)
