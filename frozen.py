@@ -11,17 +11,18 @@ RIGHT = 1
 UP = 2
 LEFT = 3
 
-X_AXIS_LOWER_BOUND = -1
-X_AXIS_UPPER_BOUND = 1
-X_AXIS_RESOLUTION = 2
+X_AXIS_LOWER_BOUND = 0
+X_AXIS_UPPER_BOUND = 100
+X_AXIS_RESOLUTION = 1000
 HORIZON = X_AXIS_RESOLUTION
+GRAPH_TYPE = 'plot'
 
 MAPS = {
     "5x5": ["FFSFF",
             "FFFFF",
             "FFFFF",
             "FFFFF",
-            "HFFFG"],
+            "FFFFG"],
     "8x8": [
         "SFFFFFFF",
         "FFHFFHFL",
@@ -110,7 +111,7 @@ def print_solution(actions, env: FrozenLakeEnv) -> None:
             break
 
 
-def categorical_td(policy, locations, initial_prob, step_size=0.1, num_epochs=500, discount_factor=1.0):
+def categorical_td(policy, locations, initial_prob, step_size=0.01, num_epochs=500, discount_factor=0.99):
     return_prob = initial_prob
     for epoch in tqdm(range(num_epochs)):
         env.reset()
@@ -148,7 +149,7 @@ def categorical_td(policy, locations, initial_prob, step_size=0.1, num_epochs=50
 our_policy = list()
 # for i in range(5):
 #     our_policy.append(RIGHT)
-for i in range(0,25):
+for i in range(0, 25):
     our_policy.append(DOWN)
 # print_solution(our_policy, env)
 # Uniformly Distributed
@@ -161,12 +162,15 @@ for i in range(len(our_policy)):
 x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
 td_prob = categorical_td(our_policy, x_axis, init_prob)
 y_axis = np.array(td_prob)
-plt.stem(x_axis, y_axis[2, :])
+if GRAPH_TYPE == 'stem':
+    plt.stem(x_axis, y_axis[2, :])
+if GRAPH_TYPE == 'plot':
+    plt.plot(x_axis, y_axis[2, :])
 plt.xlabel("Reward")
 plt.ylabel("Probability")
-plt.xlim(-2, 2)
-plt.ylim(0, 1)
+plt.xlim(X_AXIS_LOWER_BOUND - 1, X_AXIS_UPPER_BOUND + 1)
+plt.ylim(0, np.max(y_axis[2, :]) + 0.02)
 plt.grid()
 plt.show()
-print(np.sum(y_axis[2,:]))
-print(y_axis[2,:])
+print(np.sum(y_axis[2, :]))
+print(y_axis[2, :])
