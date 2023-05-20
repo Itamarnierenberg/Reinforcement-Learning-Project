@@ -5,6 +5,7 @@ from FrozenLakeEnv import FrozenLakeEnv
 from typing import List, Tuple
 import matplotlib.pyplot as plt
 from tqdm import tqdm
+import math
 
 DOWN = 0
 RIGHT = 1
@@ -12,8 +13,8 @@ UP = 2
 LEFT = 3
 
 X_AXIS_LOWER_BOUND = 0
-X_AXIS_UPPER_BOUND = 100
-X_AXIS_RESOLUTION = 1000
+X_AXIS_UPPER_BOUND = 1
+X_AXIS_RESOLUTION = 100
 HORIZON = X_AXIS_RESOLUTION
 GRAPH_TYPE = 'plot'
 
@@ -111,8 +112,31 @@ def print_solution(actions, env: FrozenLakeEnv) -> None:
             break
 
 
-def categorical_td(policy, locations, initial_prob, step_size=0.01, num_epochs=500, discount_factor=0.99):
-    return_prob = initial_prob
+def my_monte_carlo(policy, locations, initial_prob, num_epochs=50000, discount_factor=0.99):
+    est_prob = np.zeros(len(locations))
+    return_counter = np.zeros(len(locations))
+    for epoch in tqdm(range(num_epochs)):
+        env.reset()
+        curr_state = env.get_state()
+        is_terminal = False
+        iter = 0
+        traj_return = 0
+        while not is_terminal:
+            action = policy[curr_state]
+            next_state, reward, is_terminal = env.step(action)
+            traj_return += (discount_factor ** iter) * reward
+            iter += 1
+        i_star = 0
+        while locations[i_star + 1] <= traj_return:
+            i_star += 1
+        return_counter[i_star] += 1
+        est_prob = return_counter / (epoch + 1)
+
+    return est_prob
+
+
+def categorical_td(policy, locations, initial_prob, step_size=0.1, num_epochs=500, discount_factor=0.99):
+    td_est_prob = initial_prob
     for epoch in tqdm(range(num_epochs)):
         env.reset()
         curr_state = env.get_state()
@@ -127,9 +151,9 @@ def categorical_td(policy, locations, initial_prob, step_size=0.01, num_epochs=5
                 else:
                     g = reward + discount_factor * locations[j]
                 if g <= locations[0]:
-                    p_list[0] += return_prob[next_state][j]
+                    p_list[0] += td_est_prob[next_state][j]
                 elif g >= locations[X_AXIS_RESOLUTION - 1]:
-                    p_list[X_AXIS_RESOLUTION - 1] += return_prob[next_state][j]
+                    p_list[X_AXIS_RESOLUTION - 1] += td_est_prob[next_state][j]
                 else:
                     i_star = 0
                     while locations[i_star + 1] <= g:
@@ -137,13 +161,13 @@ def categorical_td(policy, locations, initial_prob, step_size=0.01, num_epochs=5
                     eta = (g - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
                     #sif eta <=0:
                         #print(f'Eta = {eta}, g = {g}, location[i_star] = {locations[i_star]}, locations[i_star + 1] = {locations[i_star + 1]}')
-                    p_list[i_star] += (1 - eta) * return_prob[next_state][j]
-                    p_list[i_star + 1] += eta * return_prob[next_state][j]
+                    p_list[i_star] += (1 - eta) * td_est_prob[next_state][j]
+                    p_list[i_star + 1] += eta * td_est_prob[next_state][j]
 
             for i in range(X_AXIS_RESOLUTION):
-                return_prob[curr_state][i] = (1 - step_size) * return_prob[curr_state][i] + step_size * p_list[i]
+                td_est_prob[curr_state][i] = (1 - step_size) * td_est_prob[curr_state][i] + step_size * p_list[i]
             curr_state = next_state
-    return return_prob
+    return td_est_prob
 
 
 our_policy = list()
@@ -161,16 +185,29 @@ for i in range(len(our_policy)):
 
 x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
 td_prob = categorical_td(our_policy, x_axis, init_prob)
-y_axis = np.array(td_prob)
+monte_prob = my_monte_carlo(our_policy, x_axis, init_prob)
+fig, axs = plt.subplots(2)
+fig.suptitle('TD Estimation and MC Estimation')
+y_axis_td = np.array(td_prob)
+y_axis_mc = np.array(monte_prob)
+axs[0].set_xlabel("Reward")
+axs[0].set_ylabel("Probability")
+axs[0].set_xlim(X_AXIS_LOWER_BOUND - 1, X_AXIS_UPPER_BOUND + 1)
+axs[0].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc)) + 0.02)
+axs[0].grid()
+axs[1].set_xlabel("Reward")
+axs[1].set_ylabel("Probability")
+axs[1].set_xlim(X_AXIS_LOWER_BOUND - 1, X_AXIS_UPPER_BOUND + 1)
+axs[1].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc)) + 0.02)
+axs[1].grid()
 if GRAPH_TYPE == 'stem':
-    plt.stem(x_axis, y_axis[2, :])
+    axs[0].stem(x_axis, y_axis_td[2, :])
+    axs[1].stem(x_axis, y_axis_mc)
 if GRAPH_TYPE == 'plot':
-    plt.plot(x_axis, y_axis[2, :])
-plt.xlabel("Reward")
-plt.ylabel("Probability")
-plt.xlim(X_AXIS_LOWER_BOUND - 1, X_AXIS_UPPER_BOUND + 1)
-plt.ylim(0, np.max(y_axis[2, :]) + 0.02)
-plt.grid()
+    axs[0].plot(x_axis, y_axis_td[2, :])
+    axs[1].plot(x_axis, y_axis_mc)
 plt.show()
-print(np.sum(y_axis[2, :]))
-print(y_axis[2, :])
+
+print(f'TD Prob Sums To:{np.sum(y_axis_td[2, :])}')
+print(f'MC Prob Sums To:{np.sum(y_axis_mc)}')
+

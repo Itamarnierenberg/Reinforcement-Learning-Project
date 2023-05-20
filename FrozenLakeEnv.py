@@ -53,7 +53,7 @@ class FrozenLakeEnv(Env):
         self.p2 = None
 
         nA = 4
-        nL_cost = {b"F": 1.0, b"H" :-1.0, b"T": 0.0, b"A": 0.0, b"L": 0.0, b"S": 0.0, b"G": 2.0, b"P": 0}
+        nL_cost = {b"F": 0.0, b"H" :-1.0, b"T": 0.0, b"A": 0.0, b"L": 0.0, b"S": 0.0, b"G": 1.0, b"P": 0}
         nS = nrow * ncol 
 
         self.P = {s: {a: [] for a in range(nA)} for s in range(nS)}
