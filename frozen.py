@@ -12,7 +12,7 @@ RIGHT = 1
 UP = 2
 LEFT = 3
 
-X_AXIS_LOWER_BOUND = 0
+X_AXIS_LOWER_BOUND = -1
 X_AXIS_UPPER_BOUND = 1
 X_AXIS_RESOLUTION = 100
 HORIZON = X_AXIS_RESOLUTION
@@ -112,7 +112,7 @@ def print_solution(actions, env: FrozenLakeEnv) -> None:
             break
 
 
-def my_monte_carlo(policy, locations, initial_prob, num_epochs=50000, discount_factor=0.99):
+def my_monte_carlo(policy, locations, initial_prob, num_epochs=500000, discount_factor=0.99):
     est_prob = np.zeros(len(locations))
     return_counter = np.zeros(len(locations))
     for epoch in tqdm(range(num_epochs)):
@@ -129,8 +129,11 @@ def my_monte_carlo(policy, locations, initial_prob, num_epochs=50000, discount_f
         i_star = 0
         while locations[i_star + 1] <= traj_return:
             i_star += 1
+        eta = (traj_return - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
         return_counter[i_star] += 1
         est_prob = return_counter / (epoch + 1)
+        #est_prob[i_star] = (return_counter[i_star] * (1 - eta)) / (epoch + 1)
+        #est_prob[i_star + 1] = (return_counter[i_star] * eta) / (epoch + 1)
 
     return est_prob
 
@@ -170,6 +173,41 @@ def categorical_td(policy, locations, initial_prob, step_size=0.1, num_epochs=50
     return td_est_prob
 
 
+def categorial_mc(policy, x_axis, a=0.1, num_epochs=500000, horizon=100, discount_factor=1.0):
+    p = np.full(X_AXIS_RESOLUTION, 1/X_AXIS_RESOLUTION)
+    for epoch in tqdm(range(num_epochs)):
+        t = 0
+        env.reset()
+        curr_state = env.get_state()
+        is_terminal = False
+        trajectory = []
+        gama = 1
+        while not is_terminal:
+            action = policy[curr_state]
+            next_state, reward, is_terminal = env.step(action)
+            trajectory.append((curr_state,gama * reward))
+            curr_state = next_state
+            gama = gama * discount_factor
+            t = t+1
+        g = 0
+        for i in range(t-1, -1, -1):
+            curr_reward = trajectory[i][1]
+            curr_state = trajectory[i][0]
+            g = g + curr_reward
+            # if i < t - horizon:
+            #     g = g - trajectory[i+horizon][1]
+            i_star = 0
+            while x_axis[i_star + 1] <= g:
+                i_star += 1
+            if curr_state not in [t[0] for t in trajectory[:i]] and curr_state == 2:
+                for j in range(X_AXIS_RESOLUTION):
+                    if j == i_star :
+                        p[j] = (1-a)*p[j] + a
+                    else:
+                        p[j] = (1 - a) * p[j]
+    return p
+
+
 our_policy = list()
 # for i in range(5):
 #     our_policy.append(RIGHT)
@@ -186,28 +224,42 @@ for i in range(len(our_policy)):
 x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
 td_prob = categorical_td(our_policy, x_axis, init_prob)
 monte_prob = my_monte_carlo(our_policy, x_axis, init_prob)
-fig, axs = plt.subplots(2)
+mc_cat_prob = categorial_mc(our_policy, x_axis, discount_factor=0.99)
+fig, axs = plt.subplots(3)
 fig.suptitle('TD Estimation and MC Estimation')
 y_axis_td = np.array(td_prob)
 y_axis_mc = np.array(monte_prob)
+y_axis_mc_cat = np.array(mc_cat_prob)
 axs[0].set_xlabel("Reward")
-axs[0].set_ylabel("Probability")
-axs[0].set_xlim(X_AXIS_LOWER_BOUND - 1, X_AXIS_UPPER_BOUND + 1)
-axs[0].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc)) + 0.02)
+axs[0].set_ylabel("TD Probability")
+axs[0].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+axs[0].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
 axs[0].grid()
 axs[1].set_xlabel("Reward")
-axs[1].set_ylabel("Probability")
-axs[1].set_xlim(X_AXIS_LOWER_BOUND - 1, X_AXIS_UPPER_BOUND + 1)
-axs[1].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc)) + 0.02)
+axs[1].set_ylabel("MC Probability")
+axs[1].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+axs[1].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
 axs[1].grid()
+axs[2].set_xlabel("Reward")
+axs[2].set_ylabel("Categorial MC Probability")
+axs[2].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+axs[2].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
+axs[2].grid()
 if GRAPH_TYPE == 'stem':
     axs[0].stem(x_axis, y_axis_td[2, :])
     axs[1].stem(x_axis, y_axis_mc)
+    axs[2].stem(x_axis, y_axis_mc_cat)
 if GRAPH_TYPE == 'plot':
     axs[0].plot(x_axis, y_axis_td[2, :])
     axs[1].plot(x_axis, y_axis_mc)
+    axs[2].plot(x_axis, y_axis_mc_cat)
 plt.show()
 
 print(f'TD Prob Sums To:{np.sum(y_axis_td[2, :])}')
 print(f'MC Prob Sums To:{np.sum(y_axis_mc)}')
+print(f'MC Categorial Prob Sums To:{np.sum(y_axis_mc_cat)}')
 
+# Complicate the frozen lake, and when does it gets messy, how many trajectories do we need to make it work all of this is regarding the TD, MC should  work regardless
+# Persistance -
+# האם הספר מנסה להתחיל מנקודה כלשהי ולאפטם את כל המסלולים ביחס לאחוזון מסוים או שהספר אומר נגיע למצב מסוים ונדרוש שהחל מהמצב הזה ומהזמן הזה אני דורש משהו מהאחוזון הזה
+# Optimization algorithms such as Q-Learning
