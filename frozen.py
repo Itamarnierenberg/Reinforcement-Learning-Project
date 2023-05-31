@@ -207,57 +207,146 @@ def categorial_mc(policy, x_axis, a=0.1, num_epochs=500000, horizon=100, discoun
                         p[j] = (1 - a) * p[j]
     return p
 
+def calculate_expectation (prob):
+    exp = 0
+    delta = (X_AXIS_UPPER_BOUND - X_AXIS_LOWER_BOUND) / X_AXIS_RESOLUTION
+    for i in range(X_AXIS_RESOLUTION):
+        exp += (1 - prob[i])*delta
 
-our_policy = list()
-# for i in range(5):
-#     our_policy.append(RIGHT)
-for i in range(0, 25):
-    our_policy.append(DOWN)
-# print_solution(our_policy, env)
-# Uniformly Distributed
-init_prob = []
-for i in range(len(our_policy)):
-    init_prob.append([])
-    for state in range(HORIZON):
-        init_prob[i].append(1/HORIZON)
+def find_action (state_ql_table, actions_num):
+    actions = []
+    max=0
+    for i in range (actions_num):
+        curr = calculate_expectation(ql_table[i])
+        if curr > max:
+            actions.clear()
+            actions.append(i)
+            max = curr
+        elif curr ==  max:
+            actions.append(i)
 
-x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
-td_prob = categorical_td(our_policy, x_axis, init_prob)
-monte_prob = my_monte_carlo(our_policy, x_axis, init_prob)
-mc_cat_prob = categorial_mc(our_policy, x_axis, discount_factor=0.99)
-fig, axs = plt.subplots(3)
-fig.suptitle('TD Estimation and MC Estimation')
-y_axis_td = np.array(td_prob)
-y_axis_mc = np.array(monte_prob)
-y_axis_mc_cat = np.array(mc_cat_prob)
-axs[0].set_xlabel("Reward")
-axs[0].set_ylabel("TD Probability")
-axs[0].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
-axs[0].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
-axs[0].grid()
-axs[1].set_xlabel("Reward")
-axs[1].set_ylabel("MC Probability")
-axs[1].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
-axs[1].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
-axs[1].grid()
-axs[2].set_xlabel("Reward")
-axs[2].set_ylabel("Categorial MC Probability")
-axs[2].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
-axs[2].set_ylim(0, max(np.max(y_axis_td[2, :]), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
-axs[2].grid()
-if GRAPH_TYPE == 'stem':
-    axs[0].stem(x_axis, y_axis_td[2, :])
-    axs[1].stem(x_axis, y_axis_mc)
-    axs[2].stem(x_axis, y_axis_mc_cat)
-if GRAPH_TYPE == 'plot':
-    axs[0].plot(x_axis, y_axis_td[2, :])
-    axs[1].plot(x_axis, y_axis_mc)
-    axs[2].plot(x_axis, y_axis_mc_cat)
-plt.show()
+# def categorical_ql(locations, initial_prob, step_size=0.1, num_epochs=500, discount_factor=0.99):
+#     q_table = np.zeros((26,4,X_AXIS_RESOLUTION))
+#     #each state and action define function
+#     for epoch in tqdm(range(num_epochs)):
+#         env.reset()
+#         curr_state = env.get_state()
+#         is_terminal = False
+#         while not is_terminal:
+#             #finding action according to the maximal expectation
+#             action = find_action((q_table[curr_state],4)
+#             next_state, reward, is_terminal = env.step(action)
+#             p_list = np.zeros(X_AXIS_RESOLUTION)
+#             for j in range(X_AXIS_RESOLUTION):
+#                 if is_terminal:
+#                     g = reward
+#                 else:
+#                     g = reward + discount_factor * locations[j]
+#                 if g <= locations[0]:
+#                     p_list[0] += td_est_prob[next_state][j]
+#                 elif g >= locations[X_AXIS_RESOLUTION - 1]:
+#                     p_list[X_AXIS_RESOLUTION - 1] += td_est_prob[next_state][j]
+#                 else:
+#                     i_star = 0
+#                     while locations[i_star + 1] <= g:
+#                         i_star += 1
+#                     eta = (g - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
+#                     #sif eta <=0:
+#                         #print(f'Eta = {eta}, g = {g}, location[i_star] = {locations[i_star]}, locations[i_star + 1] = {locations[i_star + 1]}')
+#                     p_list[i_star] += (1 - eta) * td_est_prob[next_state][j]
+#                     p_list[i_star + 1] += eta * td_est_prob[next_state][j]
+#
+#             for i in range(X_AXIS_RESOLUTION):
+#                 q_table[curr_state][action][i] = (1 - step_size) * q_table[curr_state][action][i] + step_size * p_list[i]
+#             curr_state = next_state
+#     env.reset()
+#     curr_state = env.get_state()
+#     action = action = find_action((q_table[curr_state],4)
+#     return q_table[curr_state][action]
 
-print(f'TD Prob Sums To:{np.sum(y_axis_td[2, :])}')
-print(f'MC Prob Sums To:{np.sum(y_axis_mc)}')
-print(f'MC Categorial Prob Sums To:{np.sum(y_axis_mc_cat)}')
+
+def run_experiments (num_experiments = 10):
+    our_policy = list()
+    # for i in range(5):
+    #     our_policy.append(RIGHT)
+    for i in range(0, 25):
+        our_policy.append(DOWN)
+    # print_solution(our_policy, env)
+    # Uniformly Distributed
+    init_prob = []
+    for i in range(len(our_policy)):
+        init_prob.append([])
+        for state in range(HORIZON):
+            init_prob[i].append(1/HORIZON)
+
+    x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
+    fig, axs = plt.subplots(3)
+    y_axis_td = np.empty((num_experiments,X_AXIS_RESOLUTION))
+    y_axis_mc = np.empty((num_experiments,X_AXIS_RESOLUTION))
+    y_axis_mc_cat = np.empty((num_experiments, X_AXIS_RESOLUTION))
+    for i in range(num_experiments):
+        td_prob = np.array(categorical_td(our_policy, x_axis, init_prob))[2,:]
+        monte_prob = my_monte_carlo(our_policy, x_axis, init_prob)
+        mc_cat_prob = categorial_mc(our_policy, x_axis, discount_factor=0.99)
+        fig.suptitle('TD Estimation and MC Estimation')
+        # np.append(y_axis_td, np.array(td_prob), axis = 0)
+        # np.append(y_axis_mc, np.array(monte_prob), axis = 0)
+        # np.append(y_axis_mc_cat, np.array(mc_cat_prob), axis = 0)
+        y_axis_td[i] = np.array(td_prob)
+        y_axis_mc[i] = np.array(monte_prob)
+        y_axis_mc_cat[i] = np.array(mc_cat_prob)
+    y_axis_td_mean = np.mean(y_axis_td, axis=0)
+    y_axis_mc_mean = np.mean(y_axis_mc, axis=0)
+    y_axis_mc_cat_mean = np.mean(y_axis_mc_cat, axis=0)
+    y_axis_td_max = np.max(y_axis_td, axis=0)
+    y_axis_mc_max = np.max(y_axis_mc, axis=0)
+    y_axis_mc_cat_max = np.max(y_axis_mc_cat, axis=0)
+    y_axis_td_min = np.min(y_axis_td, axis=0)
+    y_axis_mc_min = np.min(y_axis_mc, axis=0)
+    y_axis_mc_cat_min = np.min(y_axis_mc_cat, axis=0)
+    axs[0].set_xlabel("Reward")
+    axs[0].set_ylabel("TD Probability")
+    axs[0].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+    axs[0].set_ylim(0, max(np.max(y_axis_td_max), np.max(y_axis_mc_max), np.max(y_axis_mc_cat_max)) + 0.02)
+    axs[0].grid()
+    axs[1].set_xlabel("Reward")
+    axs[1].set_ylabel("MC Probability")
+    axs[1].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+    axs[1].set_ylim(0, max(np.max(y_axis_td_max), np.max(y_axis_mc_max), np.max(y_axis_mc_cat_max)) + 0.02)
+    axs[1].grid()
+    axs[2].set_xlabel("Reward")
+    axs[2].set_ylabel("Categorial MC Probability")
+    axs[2].set_xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+    axs[2].set_ylim(0, max(np.max(y_axis_td), np.max(y_axis_mc), np.max(y_axis_mc_cat)) + 0.02)
+    axs[2].grid()
+    if GRAPH_TYPE == 'stem':
+        axs[0].stem(x_axis, y_axis_td_mean)
+        axs[0].stem(x_axis, y_axis_td_max, linestyle='dashed')
+        axs[0].stem(x_axis, y_axis_td_min, linestyle='dashed')
+        axs[1].stem(x_axis, y_axis_mc_mean)
+        axs[1].stem(x_axis, y_axis_mc_max, linestyle='dashed')
+        axs[1].stem(x_axis, y_axis_mc_min, linestyle='dashed')
+        axs[2].stem(x_axis, y_axis_mc_cat_mean)
+        axs[2].stem(x_axis, y_axis_mc_cat_max, linestyle='dashed')
+        axs[2].stem(x_axis, y_axis_mc_cat_min, linestyle='dashed')
+    if GRAPH_TYPE == 'plot':
+        axs[0].plot(x_axis, y_axis_td_mean)
+        axs[0].plot(x_axis, y_axis_td_max, linestyle='dashed')
+        axs[0].plot(x_axis, y_axis_td_min, linestyle='dashed')
+        axs[1].plot(x_axis, y_axis_mc_mean)
+        axs[1].plot(x_axis, y_axis_mc_max, linestyle='dashed')
+        axs[1].plot(x_axis, y_axis_mc_min, linestyle='dashed')
+        axs[2].plot(x_axis, y_axis_mc_cat_mean)
+        axs[2].plot(x_axis, y_axis_mc_cat_max, linestyle='dashed')
+        axs[2].plot(x_axis, y_axis_mc_cat_min, linestyle='dashed')
+    plt.show()
+
+if __name__ == "__main__":
+    run_experiments(2)
+
+    # print(f'TD Prob Sums To:{np.sum(y_axis_td[2, :])}')
+    # print(f'MC Prob Sums To:{np.sum(y_axis_mc)}')
+    # print(f'MC Categorial Prob Sums To:{np.sum(y_axis_mc_cat)}')
 
 # Complicate the frozen lake, and when does it gets messy, how many trajectories do we need to make it work all of this is regarding the TD, MC should  work regardless
 # Persistance -
