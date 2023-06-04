@@ -2,86 +2,13 @@ import time
 from IPython.display import clear_output
 import numpy as np
 from FrozenLakeEnv import FrozenLakeEnv
-from typing import List, Tuple
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-import math
-
-DOWN = 0
-RIGHT = 1
-UP = 2
-LEFT = 3
-
-X_AXIS_LOWER_BOUND = -1
-X_AXIS_UPPER_BOUND = 1
-X_AXIS_RESOLUTION = 100
-HORIZON = X_AXIS_RESOLUTION
-GRAPH_TYPE = 'plot'
-
-MAPS = {
-    "5x5": ["FFSFF",
-            "FFFFF",
-            "FFFFF",
-            "FFFFF",
-            "FFFFG"],
-    "8x8": [
-        "SFFFFFFF",
-        "FFHFFHFL",
-        "FFFHFFFF",
-        "FFFFFHFF",
-        "FFFHFFFF",
-        "FHHFFFHF",
-        "FHTFHFFL",
-        "FFFHFFFG",
-    ],
-}
-
-env = FrozenLakeEnv(MAPS["5x5"])
-state = env.reset()
-print(state)
-print('Initial state:', state)
-
-
-class RandomAgent():
-    def __init__(self):
-        self.env = None
-
-    def animation(self, epochs: int, state: int, action: List[int], total_cost: int) -> None:
-        clear_output(wait=True)
-        print(self.env.render())
-        print(f"Timestep: {epochs}")
-        print(f"State: {state}")
-        print(f"Action: {action}")
-        print(f"Total Cost: {total_cost}")
-        time.sleep(1)
-
-    def random_search(self, FrozenLakeEnv: env) -> Tuple[List[int], int]:
-        self.env = env
-        self.env.reset()
-        epochs = 0
-        cost = 0
-        total_cost = 0
-
-        actions = []
-
-        state = self.env.get_initial_state()
-        while not self.env.is_final_state(state):
-            action = self.env.action_space.sample()
-            new_state, cost, terminated = self.env.step(action)
-
-            while terminated is True and self.env.is_final_state(state) is False:
-                self.env.set_state(state)
-                action = self.env.action_space.sample()
-                new_state, cost, terminated = self.env.step(action)
-
-            actions.append(action)
-            total_cost += cost
-            state = new_state
-            epochs += 1
-
-            self.animation(epochs, state, action, total_cost)
-
-        return (actions, total_cost)
+from Config import *
+from CategoricalTD import categorical_td
+from MonteCarlo import my_monte_carlo
+from QLearning import q_learning
+from matplotlib import cm
 
 
 def print_solution(actions, env: FrozenLakeEnv) -> None:
@@ -112,68 +39,7 @@ def print_solution(actions, env: FrozenLakeEnv) -> None:
             break
 
 
-def my_monte_carlo(policy, locations, initial_prob, num_epochs=500000, discount_factor=0.99):
-    est_prob = np.zeros(len(locations))
-    return_counter = np.zeros(len(locations))
-    for epoch in tqdm(range(num_epochs)):
-        env.reset()
-        curr_state = env.get_state()
-        is_terminal = False
-        iter = 0
-        traj_return = 0
-        while not is_terminal:
-            action = policy[curr_state]
-            next_state, reward, is_terminal = env.step(action)
-            traj_return += (discount_factor ** iter) * reward
-            iter += 1
-        i_star = 0
-        while locations[i_star + 1] <= traj_return:
-            i_star += 1
-        eta = (traj_return - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
-        return_counter[i_star] += 1
-        est_prob = return_counter / (epoch + 1)
-        #est_prob[i_star] = (return_counter[i_star] * (1 - eta)) / (epoch + 1)
-        #est_prob[i_star + 1] = (return_counter[i_star] * eta) / (epoch + 1)
-
-    return est_prob
-
-
-def categorical_td(policy, locations, initial_prob, step_size=0.1, num_epochs=500, discount_factor=0.99):
-    td_est_prob = initial_prob
-    for epoch in tqdm(range(num_epochs)):
-        env.reset()
-        curr_state = env.get_state()
-        is_terminal = False
-        while not is_terminal:
-            action = policy[curr_state]
-            next_state, reward, is_terminal = env.step(action)
-            p_list = np.zeros(X_AXIS_RESOLUTION)
-            for j in range(X_AXIS_RESOLUTION):
-                if is_terminal:
-                    g = reward
-                else:
-                    g = reward + discount_factor * locations[j]
-                if g <= locations[0]:
-                    p_list[0] += td_est_prob[next_state][j]
-                elif g >= locations[X_AXIS_RESOLUTION - 1]:
-                    p_list[X_AXIS_RESOLUTION - 1] += td_est_prob[next_state][j]
-                else:
-                    i_star = 0
-                    while locations[i_star + 1] <= g:
-                        i_star += 1
-                    eta = (g - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
-                    #sif eta <=0:
-                        #print(f'Eta = {eta}, g = {g}, location[i_star] = {locations[i_star]}, locations[i_star + 1] = {locations[i_star + 1]}')
-                    p_list[i_star] += (1 - eta) * td_est_prob[next_state][j]
-                    p_list[i_star + 1] += eta * td_est_prob[next_state][j]
-
-            for i in range(X_AXIS_RESOLUTION):
-                td_est_prob[curr_state][i] = (1 - step_size) * td_est_prob[curr_state][i] + step_size * p_list[i]
-            curr_state = next_state
-    return td_est_prob
-
-
-def categorial_mc(policy, x_axis, a=0.1, num_epochs=500000, horizon=100, discount_factor=1.0):
+def categorial_mc(policy, x_axis, a=0.1, num_epochs=NUM_EPOCHS_MC, horizon=100, discount_factor=DISCOUNT_FACTOR):
     p = np.full(X_AXIS_RESOLUTION, 1/X_AXIS_RESOLUTION)
     for epoch in tqdm(range(num_epochs)):
         t = 0
@@ -199,6 +65,8 @@ def categorial_mc(policy, x_axis, a=0.1, num_epochs=500000, horizon=100, discoun
             i_star = 0
             while x_axis[i_star + 1] <= g:
                 i_star += 1
+                if i_star == len(x_axis) - 1:
+                    break
             if curr_state not in [t[0] for t in trajectory[:i]] and curr_state == 2:
                 for j in range(X_AXIS_RESOLUTION):
                     if j == i_star :
@@ -225,7 +93,7 @@ def find_action (state_ql_table, actions_num):
         elif curr ==  max:
             actions.append(i)
 
-# def categorical_ql(locations, initial_prob, step_size=0.1, num_epochs=500, discount_factor=0.99):
+# def categorical_ql(locations, initial_prob, step_size=STEP_SIZE, num_epochs=NUM_EPOCHS_Q, discount_factor=DISCOUNT_FACTOR):
 #     q_table = np.zeros((26,4,X_AXIS_RESOLUTION))
 #     #each state and action define function
 #     for epoch in tqdm(range(num_epochs)):
@@ -265,11 +133,11 @@ def find_action (state_ql_table, actions_num):
 #     return q_table[curr_state][action]
 
 
-def run_experiments (num_experiments = 10):
+def run_experiments_td_mc(init_state, num_experiments=10):
     our_policy = list()
     # for i in range(5):
     #     our_policy.append(RIGHT)
-    for i in range(0, 25):
+    for i in range(NUM_OF_STATES):
         our_policy.append(DOWN)
     # print_solution(our_policy, env)
     # Uniformly Distributed
@@ -281,13 +149,13 @@ def run_experiments (num_experiments = 10):
 
     x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
     fig, axs = plt.subplots(3)
-    y_axis_td = np.empty((num_experiments,X_AXIS_RESOLUTION))
-    y_axis_mc = np.empty((num_experiments,X_AXIS_RESOLUTION))
+    y_axis_td = np.empty((num_experiments, X_AXIS_RESOLUTION))
+    y_axis_mc = np.empty((num_experiments, X_AXIS_RESOLUTION))
     y_axis_mc_cat = np.empty((num_experiments, X_AXIS_RESOLUTION))
     for i in range(num_experiments):
-        td_prob = np.array(categorical_td(our_policy, x_axis, init_prob))[2,:]
-        monte_prob = my_monte_carlo(our_policy, x_axis, init_prob)
-        mc_cat_prob = categorial_mc(our_policy, x_axis, discount_factor=0.99)
+        td_prob = np.array(categorical_td(env, our_policy, x_axis, init_prob, num_epochs=NUM_EPOCHS_TD))[init_state, :]
+        monte_prob = my_monte_carlo(env, our_policy, x_axis, init_prob, num_epochs=NUM_EPOCHS_MC)
+        mc_cat_prob = categorial_mc(our_policy, x_axis, discount_factor=DISCOUNT_FACTOR, num_epochs=NUM_EPOCHS_MC)
         fig.suptitle('TD Estimation and MC Estimation')
         # np.append(y_axis_td, np.array(td_prob), axis = 0)
         # np.append(y_axis_mc, np.array(monte_prob), axis = 0)
@@ -295,6 +163,9 @@ def run_experiments (num_experiments = 10):
         y_axis_td[i] = np.array(td_prob)
         y_axis_mc[i] = np.array(monte_prob)
         y_axis_mc_cat[i] = np.array(mc_cat_prob)
+        print(f'TD Prob Sums To:{np.sum(y_axis_td[i])}')
+        print(f'MC Prob Sums To:{np.sum(y_axis_mc[i])}')
+        print(f'MC Categorial Prob Sums To:{np.sum(y_axis_mc_cat[i])}')
     y_axis_td_mean = np.mean(y_axis_td, axis=0)
     y_axis_mc_mean = np.mean(y_axis_mc, axis=0)
     y_axis_mc_cat_mean = np.mean(y_axis_mc_cat, axis=0)
@@ -341,12 +212,44 @@ def run_experiments (num_experiments = 10):
         axs[2].plot(x_axis, y_axis_mc_cat_min, linestyle='dashed')
     plt.show()
 
-if __name__ == "__main__":
-    run_experiments(2)
 
-    # print(f'TD Prob Sums To:{np.sum(y_axis_td[2, :])}')
-    # print(f'MC Prob Sums To:{np.sum(y_axis_mc)}')
-    # print(f'MC Categorial Prob Sums To:{np.sum(y_axis_mc_cat)}')
+def run_experiments_q(init_state, num_experiments=10):
+    x_axis = np.linspace(X_AXIS_LOWER_BOUND, X_AXIS_UPPER_BOUND, X_AXIS_RESOLUTION)
+    y_axis_q = np.empty((num_experiments, X_AXIS_RESOLUTION))
+    y_axis_3d_q = np.empty((num_experiments, NUM_ACTIONS, X_AXIS_RESOLUTION))
+    for i in range(num_experiments):
+        q_func = q_learning(env, x_axis)
+        y_axis_q[i] = q_func[init_state, 0]
+        y_axis_3d_q[i] = q_func[init_state]
+    y_axis_q_mean = np.mean(y_axis_q, axis=0)
+    y_axis_3d_q_mean = np.mean(y_axis_3d_q, axis=0)
+    plt.xlabel("Reward")
+    plt.ylabel("Probability")
+    plt.xlim(X_AXIS_LOWER_BOUND - 0.1, X_AXIS_UPPER_BOUND + 0.1)
+    plt.ylim(0, np.max(y_axis_q_mean) + 0.02)
+    plt.grid()
+    plt.plot(x_axis, y_axis_q_mean)
+    plt.show()
+    fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+    y, z = np.split(y_axis_3d_q_mean, 2)
+    print(len(y))
+    print(len(z))
+    surf = ax.plot_surface(x_axis, y, z, cmap=cm.coolwarm,
+                           linewidth=0, antialiased=False)
+    plt.show()
+
+
+if __name__ == "__main__":
+    env = FrozenLakeEnv(MAPS[BOARD_SIZE])
+    state = env.reset()
+    print(state)
+    print('Initial state:', state)
+    print('Running TD and MC:')
+    # run_experiments_td_mc(state, NUM_EXP)
+    print('Running QLearning:')
+    run_experiments_q(state, 10)
+
+
 
 # Complicate the frozen lake, and when does it gets messy, how many trajectories do we need to make it work all of this is regarding the TD, MC should  work regardless
 # Persistance -

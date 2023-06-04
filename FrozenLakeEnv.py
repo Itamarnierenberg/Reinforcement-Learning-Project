@@ -1,25 +1,10 @@
 from contextlib import closing
 from io import StringIO
-from os import path
-import random
-from typing import List, Optional
-import time
-
 import numpy as np
-
-import gym
 from gym import Env, spaces, utils
-from gym.error import DependencyNotInstalled
-from typing import List, Tuple
+from typing import Tuple
+from Config import *
 
-DOWN = 0
-RIGHT = 1
-UP = 2
-LEFT = 3
-transition_function = {DOWN: [0.5, 0.25, 0.0, 0.25],
-                       RIGHT: [0.1, 0.8, 0.1, 0.0],
-                       UP: [0.0, 0.1, 0.8, 0.1],
-                       LEFT: [0.1, 0.0, 0.1, 0.8]}
 
 class FrozenLakeEnv(Env):
     """
@@ -53,7 +38,7 @@ class FrozenLakeEnv(Env):
         self.p2 = None
 
         nA = 4
-        nL_cost = {b"F": 0.0, b"H" :-1.0, b"T": 0.0, b"A": 0.0, b"L": 0.0, b"S": 0.0, b"G": 1.0, b"P": 0}
+        nL_cost = {b"F": F_REWARD, b"H" :H_REWARD, b"T": 0.0, b"A": 0.0, b"L": 0.0, b"S": 0.0, b"G": G_REWARD, b"P": 0}
         nS = nrow * ncol 
 
         self.P = {s: {a: [] for a in range(nA)} for s in range(nS)}
@@ -100,7 +85,7 @@ class FrozenLakeEnv(Env):
             the new state, the cost of the step and whether the search is over 
             (it can happen when the agent reaches a final state or falls into a hole).
         """
-        a = np.random.choice([DOWN, RIGHT, UP, LEFT], p=transition_function[a])
+        a = np.random.choice([DOWN, RIGHT, UP, LEFT], p=TRANSITION_FUNCTION[a])
         newstate, cost, terminated = self.P[self.s][a]
         # print(self.P)
         # exit(1)
