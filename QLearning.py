@@ -7,17 +7,19 @@ import random
 
 def q_learning(env, x_axis, step_size=STEP_SIZE, discount_factor=DISCOUNT_FACTOR, num_epochs=NUM_EPOCHS_Q):
     q_func = np.zeros((NUM_OF_STATES, NUM_ACTIONS, X_AXIS_RESOLUTION))
+    mc_prob = np.zeros((NUM_OF_STATES, NUM_ACTIONS, X_AXIS_RESOLUTION))
     for state in tqdm(range(NUM_OF_STATES), desc="Initializing Uniformly Distributed Q Function"):
         for action in range(NUM_ACTIONS):
             for pos_reward in range(X_AXIS_RESOLUTION):
                 q_func[state][action][pos_reward] = 1/X_AXIS_RESOLUTION
+                mc_prob[state][action][pos_reward] = 1/X_AXIS_RESOLUTION
     for epoch in tqdm(range(num_epochs), desc="QLearning:"):
         env.reset()
         curr_state = env.get_state()
         is_terminal = False
         first_iter = True
         while not is_terminal:
-            next_action = eps_greedy(q_func, curr_state)
+            next_action = eps_greedy(env, q_func, curr_state)
             if first_iter:
                 action = 0
                 first_iter = False
@@ -45,4 +47,5 @@ def q_learning(env, x_axis, step_size=STEP_SIZE, discount_factor=DISCOUNT_FACTOR
             # Incremental Step
             for j in range(X_AXIS_RESOLUTION):
                 q_func[curr_state, action, j] = (1 - step_size)*q_func[curr_state, action, j] + step_size*p_list[j]
+            curr_state = next_state
     return q_func
