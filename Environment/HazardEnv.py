@@ -1,5 +1,6 @@
 import numpy as np
 import Params as prm
+from Utils import calculate_mean
 
 
 class HazardEnv:
@@ -11,6 +12,7 @@ class HazardEnv:
         elif patient != 'Control':
             print('Patient can be only Control or Treatment')
             raise NotImplementedError
+        self.patient = patient
         self.num_states = 1
         for feature in prm.FEATURES:
             self.num_states *= len(np.arange(feature['min_val'], feature['max_val'], feature['res']))
@@ -19,9 +21,11 @@ class HazardEnv:
         for idx, feature in enumerate(prm.FEATURES):
             self.start_state[idx] = feature['start_state']
         self.curr_state = self.start_state
+        self.is_terminal = False
 
     def reset(self):
         self.curr_state = self.start_state
+        self.is_terminal = self.update_terminal()
 
     def get_start_state(self):
         return self.start_state
@@ -29,47 +33,62 @@ class HazardEnv:
     def get_state(self):
         return self.curr_state
 
-    def is_terminal(self):
+    def get_num_states(self):
+        return self.num_states
+
+    def update_terminal(self):
         for idx, feature in enumerate(prm.FEATURES):
             if self.curr_state[idx] >= feature['max_val'] or self.curr_state[idx] <= feature['min_val']:
+                self.is_terminal = True
                 return True
+        self.is_terminal = False
         return False
 
     def transition_model(self, action):
         new_state_list = np.zeros(len(prm.FEATURES))
         if action == prm.CONTROL_ACTION:
-            new_state_list[0] = self.curr_state[0] + np.random.choice([-0.5, 0, 0.5])     # What to do to Body Temperature Feature
-        if action == prm.TREATMENT_ACTION:
-            new_state_list[0] = self.curr_state[0] + np.random.choice()
+            new_state_list[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.CONTROL_PROB)     # What to do to Body Temperature Feature
+        elif action == prm.TREATMENT_ACTION:
+            new_state_list[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.TREATMENT_PROB)
         else:
             raise NotImplementedError
         return new_state_list
 
     def step(self, action):
-        if self.is_terminal():
-            return self.curr_state, self.calc_reward()
+        if self.is_terminal:
+            if self.patient == 'Control':
+                reward = 0
+            else:
+                reward = self.calc_reward()
+            return self.curr_state, reward, self.is_terminal
         else:
             self.curr_state = self.transition_model(action)
-            return self.curr_state, self.calc_reward()
+            if self.patient == 'Control':
+                reward = 0
+            else:
+                reward = self.calc_reward()
+            self.update_terminal()
+            return self.curr_state, reward, self.is_terminal
 
     @staticmethod
     def distance_func(x, x_max, x_min):
         if prm.DISTANCE_FUNC == 'L1':
-            return np.min(np.abs(x - x_max), np.abs(x - x_min))
+            return np.min([np.abs(x - x_max), np.abs(x - x_min)])
+
         elif prm.DISTANCE_FUNC == 'L2':
-            return np.min(np.abs(x - x_max), np.abs(x - x_min))
+            return np.min([np.abs(x - x_max), np.abs(x - x_min)])
         else:
             raise NotImplementedError
 
     def calc_reward(self):
         reward_arr = np.zeros(len(prm.FEATURES))
         for idx, feature in enumerate(prm.FEATURES):
-            control_mean = None # Calc the mean of the control
+            control_mean = calculate_mean(self.control_group, feature)
             hazard_ratio = HazardEnv.distance_func(self.curr_state[idx], feature['max_val'], feature['min_val']) / \
                            HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
             if hazard_ratio > 1:
                 reward_arr[idx] = 1
-            if hazard_ratio == 0:
+            if hazard_ratio == 1:
                 reward_arr[idx] = 0
             else:
                 reward_arr[idx] = -1
