@@ -4,7 +4,13 @@ import Params as prm
 
 class HazardEnv:
 
-    def __init__(self):
+    def __init__(self, patient, control_group=None):
+        if patient == 'Treatment':
+            assert control_group is not None
+            self.control_group = control_group
+        elif patient != 'Control':
+            print('Patient can be only Control or Treatment')
+            raise NotImplementedError
         self.num_states = 1
         for feature in prm.FEATURES:
             self.num_states *= len(np.arange(feature['min_val'], feature['max_val'], feature['res']))
@@ -33,16 +39,41 @@ class HazardEnv:
         new_state_list = np.zeros(len(prm.FEATURES))
         if action == prm.CONTROL_ACTION:
             new_state_list[0] = self.curr_state[0] + np.random.choice([-0.5, 0, 0.5])     # What to do to Body Temperature Feature
+        if action == prm.TREATMENT_ACTION:
+            new_state_list[0] = self.curr_state[0] + np.random.choice()
         else:
             raise NotImplementedError
         return new_state_list
 
     def step(self, action):
         if self.is_terminal():
-            return self.curr_state
+            return self.curr_state, self.calc_reward()
         else:
             self.curr_state = self.transition_model(action)
-            return self.curr_state
+            return self.curr_state, self.calc_reward()
+
+    @staticmethod
+    def distance_func(x, x_max, x_min):
+        if prm.DISTANCE_FUNC == 'L1':
+            return np.min(np.abs(x - x_max), np.abs(x - x_min))
+        elif prm.DISTANCE_FUNC == 'L2':
+            return np.min(np.abs(x - x_max), np.abs(x - x_min))
+        else:
+            raise NotImplementedError
+
+    def calc_reward(self):
+        reward_arr = np.zeros(len(prm.FEATURES))
+        for idx, feature in enumerate(prm.FEATURES):
+            control_mean = None # Calc the mean of the control
+            hazard_ratio = HazardEnv.distance_func(self.curr_state[idx], feature['max_val'], feature['min_val']) / \
+                           HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
+            if hazard_ratio > 1:
+                reward_arr[idx] = 1
+            if hazard_ratio == 0:
+                reward_arr[idx] = 0
+            else:
+                reward_arr[idx] = -1
+        return reward_arr
 
     def __str__(self):
         print_str = f'[INFO] Enviorment Information:\n'
@@ -53,19 +84,3 @@ class HazardEnv:
             print_str += f'[INFO] \t\tCurrent State = {self.curr_state[idx]}\n'
             print_str += f'[INFO] \t\tIs Terminal = {self.is_terminal()}\n'
         return print_str
-
-
-control_group = list(range(prm.SIZE_OF_CONTROL_GROUP))
-for i in range(len(control_group)):
-    control_group[i] = dict()
-    control_group[i][prm.BODY_TEMP['name']] = list()
-my_env = HazardEnv()
-for patient in range(prm.SIZE_OF_CONTROL_GROUP):
-    my_env.reset()
-    while not my_env.is_terminal():
-        for idx, feature in enumerate(prm.FEATURES):
-            control_group[patient][feature['name']].append(my_env.get_state()[idx])
-        my_env.step(prm.CONTROL_ACTION)
-print(my_env)
-for i in range(prm.SIZE_OF_CONTROL_GROUP):
-    print(f'Patient Number {i} Body Temp = {control_group[i][prm.BODY_TEMP["name"]]}')
