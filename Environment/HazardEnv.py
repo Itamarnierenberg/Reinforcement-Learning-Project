@@ -1,6 +1,7 @@
 import numpy as np
 import Params as prm
 from Utils import calculate_mean
+import itertools
 
 
 class HazardEnv:
@@ -12,6 +13,11 @@ class HazardEnv:
         elif patient != 'Control':
             print('Patient can be only Control or Treatment')
             raise NotImplementedError
+        feature_space_list = list()
+        for idx, feature in enumerate(prm.FEATURES):
+            feature_space_list.append(np.arange(feature['min_val'], feature['max_val'], feature['res']))
+        feature_space_list.append(np.arange(0, prm.HORIZON, 1))
+        self.state_space = list(itertools.product(*feature_space_list))
         self.patient = patient
         self.num_states = 1
         for feature in prm.FEATURES:
