@@ -16,6 +16,7 @@ class HazardEnv:
         self.num_states = 1
         for feature in prm.FEATURES:
             self.num_states *= len(np.arange(feature['min_val'], feature['max_val'], feature['res']))
+        self.num_states *= prm.HORIZON
         self.start_state = np.zeros(len(prm.FEATURES) + 1)
         self.curr_state = np.zeros(len(prm.FEATURES) + 1)
         for idx, feature in enumerate(prm.FEATURES):
@@ -56,6 +57,7 @@ class HazardEnv:
 
     def step(self, action):
         if self.is_terminal:
+            self.curr_state[-1] += 1
             if self.patient == 'Control':
                 reward = 0
             else:
@@ -63,6 +65,7 @@ class HazardEnv:
             return self.curr_state, reward, self.is_terminal
         else:
             self.curr_state = self.transition_model(action)
+            self.curr_state[-1] += 1
             if self.patient == 'Control':
                 reward = 0
             else:
