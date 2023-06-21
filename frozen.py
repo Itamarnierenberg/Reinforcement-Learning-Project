@@ -93,44 +93,44 @@ def find_action (state_ql_table, actions_num):
         elif curr ==  max:
             actions.append(i)
 
-# def categorical_ql(locations, initial_prob, step_size=STEP_SIZE, num_epochs=NUM_EPOCHS_Q, discount_factor=DISCOUNT_FACTOR):
-#     q_table = np.zeros((26,4,X_AXIS_RESOLUTION))
-#     #each state and action define function
-#     for epoch in tqdm(range(num_epochs)):
-#         env.reset()
-#         curr_state = env.get_state()
-#         is_terminal = False
-#         while not is_terminal:
-#             #finding action according to the maximal expectation
-#             action = find_action((q_table[curr_state],4)
-#             next_state, reward, is_terminal = env.step(action)
-#             p_list = np.zeros(X_AXIS_RESOLUTION)
-#             for j in range(X_AXIS_RESOLUTION):
-#                 if is_terminal:
-#                     g = reward
-#                 else:
-#                     g = reward + discount_factor * locations[j]
-#                 if g <= locations[0]:
-#                     p_list[0] += td_est_prob[next_state][j]
-#                 elif g >= locations[X_AXIS_RESOLUTION - 1]:
-#                     p_list[X_AXIS_RESOLUTION - 1] += td_est_prob[next_state][j]
-#                 else:
-#                     i_star = 0
-#                     while locations[i_star + 1] <= g:
-#                         i_star += 1
-#                     eta = (g - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
-#                     #sif eta <=0:
-#                         #print(f'Eta = {eta}, g = {g}, location[i_star] = {locations[i_star]}, locations[i_star + 1] = {locations[i_star + 1]}')
-#                     p_list[i_star] += (1 - eta) * td_est_prob[next_state][j]
-#                     p_list[i_star + 1] += eta * td_est_prob[next_state][j]
-#
-#             for i in range(X_AXIS_RESOLUTION):
-#                 q_table[curr_state][action][i] = (1 - step_size) * q_table[curr_state][action][i] + step_size * p_list[i]
-#             curr_state = next_state
-#     env.reset()
-#     curr_state = env.get_state()
-#     action = action = find_action((q_table[curr_state],4)
-#     return q_table[curr_state][action]
+def categorical_ql(locations, initial_prob, step_size=STEP_SIZE, num_epochs=NUM_EPOCHS_Q, discount_factor=DISCOUNT_FACTOR):
+    q_table = np.zeros((26,4,X_AXIS_RESOLUTION))
+    #each state and action define function
+    for epoch in tqdm(range(num_epochs)):
+        env.reset()
+        curr_state = env.get_state()
+        is_terminal = False
+        while not is_terminal:
+            #finding action according to the maximal expectation
+            action = find_action((q_table[curr_state],4)
+            next_state, reward, is_terminal = env.step(action)
+            p_list = np.zeros(X_AXIS_RESOLUTION)
+            for j in range(X_AXIS_RESOLUTION):
+                if is_terminal:
+                    g = reward
+                else:
+                    g = reward + discount_factor * locations[j]
+                if g <= locations[0]:
+                    p_list[0] += td_est_prob[next_state][j]
+                elif g >= locations[X_AXIS_RESOLUTION - 1]:
+                    p_list[X_AXIS_RESOLUTION - 1] += td_est_prob[next_state][j]
+                else:
+                    i_star = 0
+                    while locations[i_star + 1] <= g:
+                        i_star += 1
+                    eta = (g - locations[i_star]) / (locations[i_star + 1] - locations[i_star])
+                    #sif eta <=0:
+                        #print(f'Eta = {eta}, g = {g}, location[i_star] = {locations[i_star]}, locations[i_star + 1] = {locations[i_star + 1]}')
+                    p_list[i_star] += (1 - eta) * td_est_prob[next_state][j]
+                    p_list[i_star + 1] += eta * td_est_prob[next_state][j]
+
+            for i in range(X_AXIS_RESOLUTION):
+                q_table[curr_state][action][i] = (1 - step_size) * q_table[curr_state][action][i] + step_size * p_list[i]
+            curr_state = next_state
+    env.reset()
+    curr_state = env.get_state()
+    action = action = find_action((q_table[curr_state],4)
+    return q_table[curr_state][action]
 
 
 def run_experiments_td_mc(init_state, num_experiments=10):

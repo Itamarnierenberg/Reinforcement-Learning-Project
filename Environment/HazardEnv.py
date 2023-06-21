@@ -55,17 +55,3 @@ class HazardEnv:
         return print_str
 
 
-control_group = list(range(prm.SIZE_OF_CONTROL_GROUP))
-for i in range(len(control_group)):
-    control_group[i] = dict()
-    control_group[i][prm.BODY_TEMP['name']] = list()
-my_env = HazardEnv()
-for patient in range(prm.SIZE_OF_CONTROL_GROUP):
-    my_env.reset()
-    while not my_env.is_terminal():
-        for idx, feature in enumerate(prm.FEATURES):
-            control_group[patient][feature['name']].append(my_env.get_state()[idx])
-        my_env.step(prm.CONTROL_ACTION)
-print(my_env)
-for i in range(prm.SIZE_OF_CONTROL_GROUP):
-    print(f'Patient Number {i} Body Temp = {control_group[i][prm.BODY_TEMP["name"]]}')
