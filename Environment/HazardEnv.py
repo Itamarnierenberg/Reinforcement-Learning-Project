@@ -62,12 +62,13 @@ class HazardEnv:
 
     def step(self, action):
         if self.is_terminal:
-            self.curr_state[-1] += 1
-            if self.patient == 'Control':
-                reward = 0
-            else:
-                reward = self.calc_reward()
-            return self.curr_state, reward, self.is_terminal
+            # self.curr_state[-1] += 1
+            # if self.patient == 'Control':
+            #     reward = 0
+            # else:
+            #     reward = self.calc_reward()
+            # return self.curr_state, reward, self.is_terminal
+            raise NotImplementedError
         else:
             self.curr_state = self.transition_model(action)
             self.curr_state[-1] += 1
@@ -77,6 +78,23 @@ class HazardEnv:
                 reward = self.calc_reward()
             self.update_terminal()
             return self.curr_state, reward, self.is_terminal
+
+    def get_next_states (self, feature):
+        next_states = []
+        feature_idx = prm.FEATURES.index(feature)
+        curr_state = self.curr_state[feature_idx]
+        time =  self.curr_state[-1]
+        next_states.append(np.max(curr_state-0.5), prm.feature["min_val"])
+        next_states.append(curr_state)
+        next_states.append(np.min(curr_state+0.5), prm.feature["max_val"])
+        return next_states
+    def get_neighbors (self, feature):
+        next_states = self.get_next_states(feature)
+        time = self.curr_state[-1] + 1
+        rewards = [self.calc_reward(state, time) for state in next_states]
+        return next_states, rewards
+
+
 
     @staticmethod
     def distance_func(x, x_max, x_min):
@@ -88,11 +106,11 @@ class HazardEnv:
         else:
             raise NotImplementedError
 
-    def calc_reward(self):
+    def calc_reward(self, state = curr.state):
         reward_arr = np.zeros(len(prm.FEATURES))
         for idx, feature in enumerate(prm.FEATURES):
-            control_mean = calculate_mean(self.control_group, feature, self.curr_state[-1])
-            hazard_ratio = HazardEnv.distance_func(self.curr_state[idx], feature['max_val'], feature['min_val']) / \
+            control_mean = calculate_mean(self.control_group, feature, self.state[-1])
+            hazard_ratio = HazardEnv.distance_func(self.state[idx], feature['max_val'], feature['min_val']) / \
                            HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
             if hazard_ratio > 1:
                 reward_arr[idx] = 1
