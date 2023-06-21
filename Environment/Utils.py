@@ -14,5 +14,13 @@ def calculate_mean (control_data, feature):
     return sum/prm.SIZE_OF_CONTROL_GROUP
 
 
+def state_to_idx_dict(feature):
+    state_list = np.arange(feature['min_val'], feature['max_val'], feature['res'])
+    idx_dict = dict()
+    for idx, state in enumerate(state_list):
+        idx_dict[state] = idx
+    return idx_dict
+
+
 
 

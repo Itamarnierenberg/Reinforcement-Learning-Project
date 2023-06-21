@@ -3,6 +3,7 @@ import numpy as np
 import Params as prm
 from HazardEnv import HazardEnv
 from CategoricalTD import categorical_td
+from Utils import state_to_idx_dict
 
 
 def create_control_data():
@@ -26,6 +27,7 @@ def create_control_data():
 
 if __name__ == '__main__':
     control_group = create_control_data()
+    idx_dict = state_to_idx_dict(prm.BODY_TEMP)
     env = HazardEnv(patient='Treatment', control_group=control_group)
     state_list = np.arange(prm.BODY_TEMP['min_val'], prm.BODY_TEMP['max_val'], prm.BODY_TEMP['res'])
     policy = dict()
@@ -33,7 +35,8 @@ if __name__ == '__main__':
         policy[state] = prm.TREATMENT_ACTION
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
     td_prob = categorical_td(env, policy, x_axis)
-    plt.plot(x_axis, td_prob)
+    print(td_prob[idx_dict[env.get_start_state()[0]]])
+    plt.plot(x_axis, td_prob[idx_dict[env.get_start_state()[0]]])
     plt.show()
 
 

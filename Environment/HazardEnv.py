@@ -16,8 +16,8 @@ class HazardEnv:
         self.num_states = 1
         for feature in prm.FEATURES:
             self.num_states *= len(np.arange(feature['min_val'], feature['max_val'], feature['res']))
-        self.start_state = np.zeros(len(prm.FEATURES))
-        self.curr_state = np.zeros(len(prm.FEATURES))
+        self.start_state = np.zeros(len(prm.FEATURES) + 1)
+        self.curr_state = np.zeros(len(prm.FEATURES) + 1)
         for idx, feature in enumerate(prm.FEATURES):
             self.start_state[idx] = feature['start_state']
         self.curr_state = self.start_state
