@@ -16,7 +16,6 @@ class HazardEnv:
         self.num_states = 1
         for feature in prm.FEATURES:
             self.num_states *= len(np.arange(feature['min_val'], feature['max_val'], feature['res']))
-        self.num_states *= prm.HORIZON
         self.start_state = np.zeros(len(prm.FEATURES) + 1)
         self.curr_state = np.zeros(len(prm.FEATURES) + 1)
         for idx, feature in enumerate(prm.FEATURES):
@@ -86,7 +85,7 @@ class HazardEnv:
     def calc_reward(self):
         reward_arr = np.zeros(len(prm.FEATURES))
         for idx, feature in enumerate(prm.FEATURES):
-            control_mean = calculate_mean(self.control_group, feature)
+            control_mean = calculate_mean(self.control_group, feature, self.curr_state[-1])
             hazard_ratio = HazardEnv.distance_func(self.curr_state[idx], feature['max_val'], feature['min_val']) / \
                            HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
             if hazard_ratio > 1:
