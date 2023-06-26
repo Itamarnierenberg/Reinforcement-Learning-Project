@@ -6,23 +6,22 @@ from Utils import state_to_idx_dict
 
 def categorical_td(env, policy, locations, step_size=prm.STEP_SIZE, num_epochs=prm.NUM_EPOCHS_TD, discount_factor=prm.DISCOUNT_FACTOR):
     init_prob = []
-    idx_dict = state_to_idx_dict(prm.BODY_TEMP)
     for i in range(len(policy)):
         init_prob.append([])
         for state in range(prm.X_AXIS_RESOLUTION):
             init_prob[i].append(1 / prm.X_AXIS_RESOLUTION)
     td_est_prob = init_prob
-    for epoch in tqdm(range(num_epochs)):
+    for epoch in tqdm(range(num_epochs), desc='Categorical TD Epoch Progress'):
         env.reset()
         curr_state = env.get_state()
         is_terminal = False
         step = 0
-        while not is_terminal or step >= prm.HORIZON:
-            action = policy[curr_state[0]]
+        while not is_terminal:
+            curr_state_idx = state_to_idx_dict(curr_state, env.get_state_space())
+            action = policy[curr_state_idx]
             next_state, reward, is_terminal = env.step(action)
             p_list = np.zeros(prm.X_AXIS_RESOLUTION)
-            next_state_idx = idx_dict[next_state[0]]
-            curr_state_idx = idx_dict[curr_state[0]]
+            next_state_idx = state_to_idx_dict(next_state, env.get_state_space())
             for j in range(prm.X_AXIS_RESOLUTION):
                 if is_terminal:
                     g = reward

@@ -4,39 +4,40 @@ import Params as prm
 from HazardEnv import HazardEnv
 from CategoricalTD import categorical_td
 from Utils import state_to_idx_dict
+from Utils import create_control_data
+from Utils import print_treatment_plan
+from algorithm.PolicyOptimization import policy_evaluation, policy_iteration
 
 
-def create_control_data():
-    control_group = list(range(prm.SIZE_OF_CONTROL_GROUP))
-    for i in range(prm.SIZE_OF_CONTROL_GROUP):
-        control_group[i] = dict()
-        for feature in prm.FEATURES:
-            control_group[i][feature['name']] = list()
-
-    my_env = HazardEnv(patient='Control')
-    for patient in range(prm.SIZE_OF_CONTROL_GROUP):
-        my_env.reset()
-        i = 0
-        while not my_env.is_terminal and i < prm.HORIZON:
-            for idx, feature in enumerate(prm.FEATURES):
-                control_group[patient][feature['name']].append(my_env.get_state()[idx])
-            my_env.step(prm.CONTROL_ACTION)
-            i = + 1
-    return control_group
-
-
-if __name__ == '__main__':
+def run_td_exp():
     control_group = create_control_data()
-    idx_dict = state_to_idx_dict(prm.BODY_TEMP)
     env = HazardEnv(patient='Treatment', control_group=control_group)
-    state_list = np.arange(prm.BODY_TEMP['min_val'], prm.BODY_TEMP['max_val'], prm.BODY_TEMP['res'])
+    state_list = env.get_state_space()
+    print(state_list)
     policy = dict()
     for state in state_list:
-        policy[state] = prm.TREATMENT_ACTION
+        policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
     td_prob = categorical_td(env, policy, x_axis)
-    print(td_prob[idx_dict[env.get_start_state()[0]]])
-    plt.plot(x_axis, td_prob[idx_dict[env.get_start_state()[0]]])
+    print(td_prob[state_to_idx_dict(env.get_start_state(), state_list)])
+    plt.plot(x_axis, td_prob[state_to_idx_dict(env.get_start_state(), env.get_state_space())])
     plt.show()
 
 
+def run_policy_evaluation():
+    control_group = create_control_data()
+    env = HazardEnv(patient='Treatment', control_group=control_group)
+    policy = dict()
+    state_list = env.get_state_space()
+    print(state_list)
+    print(env.control_mean)
+    for state in state_list:
+        policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
+    values = policy_evaluation(env, policy)
+    start_state_idx = state_to_idx_dict(env.get_start_state(), state_list)
+    optimal_policy = policy_iteration(env, policy)
+    print_treatment_plan(state_list, optimal_policy)
+
+
+if __name__ == '__main__':
+    run_policy_evaluation()

@@ -1,7 +1,7 @@
 import numpy as np
 import Params as prm
-from Utils import calculate_mean
 import itertools
+from rich.traceback import install
 
 
 class HazardEnv:
@@ -10,28 +10,32 @@ class HazardEnv:
         if patient == 'Treatment':
             assert control_group is not None
             self.control_group = control_group
+            self.control_mean = self.calculate_control_mean()
         elif patient != 'Control':
             print('Patient can be only Control or Treatment')
+            install()
             raise NotImplementedError
         feature_space_list = list()
         for idx, feature in enumerate(prm.FEATURES):
-            feature_space_list.append(np.arange(feature['min_val'], feature['max_val'], feature['res']))
-        feature_space_list.append(np.arange(0, prm.HORIZON, 1))
+            feature_space_list.append(np.arange(feature['min_val'], feature['max_val'] + feature['res'], feature['res']))
+        feature_space_list.append(np.arange(0, prm.HORIZON + 1, 1))
         self.state_space = list(itertools.product(*feature_space_list))
         self.patient = patient
-        self.num_states = 1
-        for feature in prm.FEATURES:
-            self.num_states *= len(np.arange(feature['min_val'], feature['max_val'], feature['res']))
+        self.num_states = len(self.state_space)
         self.start_state = np.zeros(len(prm.FEATURES) + 1)
         self.curr_state = np.zeros(len(prm.FEATURES) + 1)
+        self.curr_time = 0
         for idx, feature in enumerate(prm.FEATURES):
             self.start_state[idx] = feature['start_state']
         self.curr_state = self.start_state
         self.is_terminal = False
+        self.history = list()
+        self.history.append(self.curr_state)
 
     def reset(self):
         self.curr_state = self.start_state
-        self.is_terminal = self.update_terminal()
+        self.curr_time = 0
+        self.is_terminal = self.is_terminal_state()
 
     def get_start_state(self):
         return self.start_state
@@ -42,59 +46,89 @@ class HazardEnv:
     def get_num_states(self):
         return self.num_states
 
-    def update_terminal(self):
+    def get_time(self):
+        return self.curr_time
+
+    def get_state_space(self):
+        return self.state_space
+
+    def get_history(self):
+        return self.history
+
+    def is_terminal_state(self, state=None):
+        if state is None:
+            state = self.curr_state
         for idx, feature in enumerate(prm.FEATURES):
-            if self.curr_state[idx] >= feature['max_val'] or self.curr_state[idx] <= feature['min_val']:
-                self.is_terminal = True
+            if state[idx] >= feature['max_val'] or state[idx] <= feature['min_val']:
                 return True
-        self.is_terminal = False
+        if state[prm.TIME_IDX] >= prm.HORIZON:
+            return True
         return False
 
     def transition_model(self, action):
-        new_state_list = np.zeros(len(prm.FEATURES))
+        new_state = np.zeros(len(prm.FEATURES) + 1)
         if action == prm.CONTROL_ACTION:
-            new_state_list[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.CONTROL_PROB)     # What to do to Body Temperature Feature
+            new_state[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.CONTROL_PROB)     # What to do to Body Temperature Feature
         elif action == prm.TREATMENT_ACTION:
-            new_state_list[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.TREATMENT_PROB)
+            new_state[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.TREATMENT_PROB)
         else:
+            install()
             raise NotImplementedError
-        return new_state_list
+        return new_state
 
     def step(self, action):
         if self.is_terminal:
-            # self.curr_state[-1] += 1
-            # if self.patient == 'Control':
-            #     reward = 0
-            # else:
-            #     reward = self.calc_reward()
-            # return self.curr_state, reward, self.is_terminal
+            install()
             raise NotImplementedError
         else:
             self.curr_state = self.transition_model(action)
-            self.curr_state[-1] += 1
+            self.curr_time += 1
+            self.curr_state[prm.TIME_IDX] = self.curr_time
             if self.patient == 'Control':
                 reward = 0
             else:
                 reward = self.calc_reward()
-            self.update_terminal()
+            self.is_terminal = self.is_terminal_state()
+            self.history.append(self.curr_state)
             return self.curr_state, reward, self.is_terminal
 
-    def get_next_states (self, feature):
-        next_states = []
-        feature_idx = prm.FEATURES.index(feature)
-        curr_state = self.curr_state[feature_idx]
-        time =  self.curr_state[-1]
-        next_states.append(np.max(curr_state-0.5), prm.feature["min_val"])
-        next_states.append(curr_state)
-        next_states.append(np.min(curr_state+0.5), prm.feature["max_val"])
+    def get_next_states(self, state=None):
+        if state is None:
+            state = self.curr_state
+        feature_space_list = list()
+        for idx, feature in enumerate(prm.FEATURES):
+            new_state_left = np.max([state[idx] - feature['res'], feature['min_val']])
+            new_state_right = np.min([state[idx] + feature['res'], feature['max_val']])
+            feature_space_list.append([new_state_left, new_state_right])
+        feature_space_list.append([self.curr_time + 1])
+        next_states = list(itertools.product(*feature_space_list))
         return next_states
-    def get_neighbors (self, feature):
-        next_states = self.get_next_states(feature)
-        time = self.curr_state[-1] + 1
-        rewards = [self.calc_reward(state, time) for state in next_states]
+
+    def get_neighbors(self, state=None):
+        if self.is_terminal_state(state):
+            return [], []
+        next_states = self.get_next_states(state)
+        rewards = [self.calc_reward(next_state) for next_state in next_states]
         return next_states, rewards
 
-
+    def transition_function(self, state, action, next_state):
+        next_states, _ = self.get_neighbors(state)
+        if next_state not in next_states:
+            return 0
+        prob_list = None
+        if action == prm.CONTROL_ACTION:
+            prob_list = prm.CONTROL_PROB
+        elif action == prm.TREATMENT_ACTION:
+            prob_list = prm.TREATMENT_PROB
+        else:
+            install()
+            raise NotImplementedError
+        if state[prm.BODY_TEMP['idx']] < next_state[prm.BODY_TEMP['idx']]:
+            return prob_list[2]
+        elif state[prm.BODY_TEMP['idx']] == next_state[prm.BODY_TEMP['idx']]:
+            return prob_list[1]
+        else:
+            return prob_list[0]
 
     @staticmethod
     def distance_func(x, x_max, x_min):
@@ -104,28 +138,53 @@ class HazardEnv:
         elif prm.DISTANCE_FUNC == 'L2':
             return np.min([np.abs(x - x_max), np.abs(x - x_min)])
         else:
+            install()
             raise NotImplementedError
 
-    def calc_reward(self, state = curr.state):
+    def calc_reward(self, state_input=None):
+        if state_input is not None:
+            state = state_input
+        else:
+            state = self.curr_state
         reward_arr = np.zeros(len(prm.FEATURES))
         for idx, feature in enumerate(prm.FEATURES):
-            control_mean = calculate_mean(self.control_group, feature, self.state[-1])
-            hazard_ratio = HazardEnv.distance_func(self.state[idx], feature['max_val'], feature['min_val']) / \
-                           HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
-            if hazard_ratio > 1:
+            control_mean = self.control_mean[self.curr_time][idx]
+            if control_mean >= feature['max_val'] or control_mean <= feature['min_val']:
                 reward_arr[idx] = 1
-            if hazard_ratio == 1:
-                reward_arr[idx] = 0
+            elif state[idx] >= feature['max_val'] or state[idx] <= feature['min_val']:
+                reward_arr[idx] = -5
             else:
-                reward_arr[idx] = -1
+                hazard_ratio = HazardEnv.distance_func(state[idx], feature['max_val'], feature['min_val']) / \
+                                HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
+                if hazard_ratio > 1:
+                    reward_arr[idx] = 1
+                elif hazard_ratio == 1:
+                    reward_arr[idx] = 0
+                else:
+                    reward_arr[idx] = -1
         return reward_arr
 
+    def calculate_control_mean(self):
+        sum_arr = np.zeros((prm.HORIZON + 1, len(prm.FEATURES)))
+        count_arr = np.zeros(prm.HORIZON + 1)
+        for patient in range(prm.SIZE_OF_CONTROL_GROUP):
+            for state in self.control_group[patient]:
+                curr_time = int(state[prm.TIME_IDX])
+                sum_arr[curr_time] += state[:prm.TIME_IDX]
+                count_arr[curr_time] += 1
+        for curr_time in range(prm.HORIZON + 1):
+            if count_arr[curr_time] == 0:
+                continue
+            sum_arr[curr_time] = sum_arr[curr_time] / count_arr[curr_time]
+        return sum_arr
+
     def __str__(self):
-        print_str = f'[INFO] Enviorment Information:\n'
+        print_str = f'[INFO] Environment Information:\n'
         print_str += f'[INFO] Number of States = {self.num_states}\n'
+        print_str += f'[INFO] Current Time = {self.curr_time}\n'
+        print_str += f'[INFO] Is Terminal = {self.is_terminal}\n'
         for idx, feature in enumerate(prm.FEATURES):
             print_str += f'[INFO] Feature = {feature["name"]}\n'
             print_str += f'[INFO] \t\tStart State = {self.start_state[idx]}\n'
             print_str += f'[INFO] \t\tCurrent State = {self.curr_state[idx]}\n'
-            print_str += f'[INFO] \t\tIs Terminal = {self.is_terminal()}\n'
         return print_str
