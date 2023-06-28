@@ -13,14 +13,7 @@ from rich.traceback import install
 install()
 
 
-def run_td_exp():
-    control_group = create_control_data()
-    env = HazardEnv(patient='Treatment', control_group=control_group)
-    state_list = env.get_state_space()
-    print(state_list)
-    policy = dict()
-    for state in state_list:
-        policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
+def run_td_exp(env, policy):
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
     td_prob = categorical_td(env, policy, x_axis)
     print(td_prob[state_to_idx_dict(env.get_start_state(), state_list)])
@@ -28,18 +21,20 @@ def run_td_exp():
     plt.show()
 
 
-def run_policy_evaluation():
-    control_group = create_control_data()
-    env = HazardEnv(patient='Treatment', control_group=control_group)
-    policy = dict()
-    state_list = env.get_state_space()
-    for state in state_list:
-        policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
-    values = policy_evaluation(env, policy)
-    start_state_idx = state_to_idx_dict(env.get_start_state(), state_list)
-    optimal_policy = policy_iteration(env, policy)
-    print_treatment_plan(state_list, optimal_policy)
+def run_policy_evaluation(env, init_policy):
+    optimal_policy = policy_iteration(env, init_policy)
+    print_treatment_plan(env, state_list, optimal_policy)
+    return optimal_policy
 
 
 if __name__ == '__main__':
-    run_policy_evaluation()
+    control_group = create_control_data()
+    env = HazardEnv(patient='Treatment', control_group=control_group)
+    state_list = env.get_state_space()
+    num_states = env.get_num_states()
+    print(f'Num States = {num_states}')
+    init_policy = np.zeros(env.get_num_states())
+    for state in state_list:
+        init_policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
+    optimal_policy = run_policy_evaluation(env, init_policy)
+    run_td_exp(env, optimal_policy)

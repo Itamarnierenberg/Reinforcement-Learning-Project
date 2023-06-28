@@ -18,14 +18,14 @@ ACTION_IDX_TO_NAME = ["Don't take a pill", "Take a pill"]
 
 # Environment Params
 SIZE_OF_CONTROL_GROUP = 100
-HORIZON = 10
+HORIZON = 5
 DISTANCE_FUNC = 'L1'
 CONTROL_PROB = [0.25, 0.5, 0.25]
 TREATMENT_PROB = [0.3, 0.5, 0.2]
 TIME_IDX = -1
 
 # Policy Iteration Params
-MAX_ITER = 2000
+MAX_ITER = 100000
 
 # Categorical TD Params
 NUM_EPOCHS_TD = 500
