@@ -25,7 +25,7 @@ def policy_evaluation(env, policy, discount_factor=prm.DISCOUNT_FACTOR, epsilon=
             return values
 
 
-def policy_iteration(env, initial_policy, discount_factor=prm.DISCOUNT_FACTOR):
+def policy_iteration(env, initial_policy, discount_factor=prm.DISCOUNT_FACTOR, max_iter=prm.MAX_ITER):
     state_list = env.get_state_space()
     policy = initial_policy
     num_iter = 0
@@ -52,15 +52,11 @@ def policy_iteration(env, initial_policy, discount_factor=prm.DISCOUNT_FACTOR):
                 next_state_idx = state_to_idx_dict(next_states[i], state_list)
                 prob = env.transition_function(state, policy[state_idx], next_states[i])
                 curr_util += prob * (rewards[i] + discount_factor * values[next_state_idx])
-                print(max_action_util)
-                print(curr_util)
                 if max_action_util > curr_util:
                     policy[state_idx] = max_action
                     is_unchanged = False
         num_iter += 1
-        if num_iter == 1000:
-            print('hi')
-        if is_unchanged:
+        if is_unchanged or num_iter == max_iter:
             return policy
 
 

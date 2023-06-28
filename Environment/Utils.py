@@ -27,9 +27,12 @@ def create_control_data():
 
 
 def print_treatment_plan(state_list, policy):
+    policy_str = ''
     for state_idx, action in policy.items():
-        print(f'Under the Measurements:')
+        policy_str += f'Under the Measurements:\n'
         state = state_list[state_idx]
         for idx, feature_value in enumerate(state):
-            print(f'\t\t{prm.FEATURES_IDX_TO_NAME[idx]} = {feature_value}')
-        print(f'{prm.ACTION_IDX_TO_NAME[action]}\n\n')
+            policy_str += f'\t\t{prm.FEATURES_IDX_TO_NAME[idx]} = {feature_value}\n'
+        policy_str += f'{prm.ACTION_IDX_TO_NAME[action]}\n\n'
+    with open(prm.POLICY_OUTPUT_FILE, prm.WRITE_FILE) as out_file:
+        out_file.write(policy_str)

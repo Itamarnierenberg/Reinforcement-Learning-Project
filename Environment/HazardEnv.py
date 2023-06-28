@@ -1,7 +1,6 @@
 import numpy as np
 import Params as prm
 import itertools
-from rich.traceback import install
 
 
 class HazardEnv:
@@ -13,7 +12,6 @@ class HazardEnv:
             self.control_mean = self.calculate_control_mean()
         elif patient != 'Control':
             print('Patient can be only Control or Treatment')
-            install()
             raise NotImplementedError
         feature_space_list = list()
         for idx, feature in enumerate(prm.FEATURES):
@@ -68,17 +66,17 @@ class HazardEnv:
     def transition_model(self, action):
         new_state = np.zeros(len(prm.FEATURES) + 1)
         if action == prm.CONTROL_ACTION:
-            new_state[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.CONTROL_PROB)     # What to do to Body Temperature Feature
+            step_list = [-prm.FEATURES[0]['res'], 0, prm.FEATURES[0]['res']]
+            new_state[0] = self.curr_state[0] + np.random.choice(step_list, p=prm.CONTROL_PROB)     # What to do to Body Temperature Feature
         elif action == prm.TREATMENT_ACTION:
-            new_state[0] = self.curr_state[0] + np.random.choice(prm.RES, p=prm.TREATMENT_PROB)
+            step_list = [-prm.FEATURES[0]['res'], 0, prm.FEATURES[0]['res']]
+            new_state[0] = self.curr_state[0] + np.random.choice(step_list, p=prm.TREATMENT_PROB)
         else:
-            install()
             raise NotImplementedError
         return new_state
 
     def step(self, action):
         if self.is_terminal:
-            install()
             raise NotImplementedError
         else:
             self.curr_state = self.transition_model(action)
@@ -121,7 +119,6 @@ class HazardEnv:
         elif action == prm.TREATMENT_ACTION:
             prob_list = prm.TREATMENT_PROB
         else:
-            install()
             raise NotImplementedError
         if state[prm.BODY_TEMP['idx']] < next_state[prm.BODY_TEMP['idx']]:
             return prob_list[2]
@@ -138,7 +135,6 @@ class HazardEnv:
         elif prm.DISTANCE_FUNC == 'L2':
             return np.min([np.abs(x - x_max), np.abs(x - x_min)])
         else:
-            install()
             raise NotImplementedError
 
     def calc_reward(self, state_input=None):

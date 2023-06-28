@@ -7,6 +7,10 @@ from Utils import state_to_idx_dict
 from Utils import create_control_data
 from Utils import print_treatment_plan
 from algorithm.PolicyOptimization import policy_evaluation, policy_iteration
+from rich.traceback import install
+
+
+install()
 
 
 def run_td_exp():
@@ -29,8 +33,6 @@ def run_policy_evaluation():
     env = HazardEnv(patient='Treatment', control_group=control_group)
     policy = dict()
     state_list = env.get_state_space()
-    print(state_list)
-    print(env.control_mean)
     for state in state_list:
         policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
     values = policy_evaluation(env, policy)
