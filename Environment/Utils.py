@@ -28,10 +28,11 @@ def create_control_data():
 
 def print_treatment_plan(env, state_list, policy):
     policy_str = ''
-    for state_idx, action in enumerate(policy):
-        state = state_list[state_idx]
+    for state_idx, action in policy.items():
         if env.is_terminal_state(state):
             continue
+        policy_str += f'Under the Measurements:\n'
+        state = state_list[state_idx]
         policy_str += f'Under the Measurements:\n'
         for idx, feature_value in enumerate(state):
             policy_str += f'\t\t{prm.FEATURES_IDX_TO_NAME[idx]} = {feature_value}\n'

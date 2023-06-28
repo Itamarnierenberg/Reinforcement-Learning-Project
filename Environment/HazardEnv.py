@@ -109,15 +109,14 @@ class HazardEnv:
         rewards = [self.calc_reward(next_state) for next_state in next_states]
         return next_states, rewards
 
-    def transition_function(self, state, action, next_state):
+    def transition_function(self, state, action, next_state, treatment_prob=prm.TREATMENT_PROB):
         next_states, _ = self.get_neighbors(state)
         if next_state not in next_states:
             return 0
-        prob_list = None
         if action == prm.CONTROL_ACTION:
             prob_list = prm.CONTROL_PROB
         elif action == prm.TREATMENT_ACTION:
-            prob_list = prm.TREATMENT_PROB
+            prob_list = treatment_prob
         else:
             raise NotImplementedError
         if state[prm.BODY_TEMP['idx']] < next_state[prm.BODY_TEMP['idx']]:
