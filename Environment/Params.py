@@ -25,7 +25,7 @@ TREATMENT_PROB = [1, 0, 0]
 TIME_IDX = -1
 
 # Policy Iteration Params
-MAX_ITER = 100000
+MAX_ITER = 100
 
 # Categorical TD Params
 NUM_EPOCHS_TD = 500

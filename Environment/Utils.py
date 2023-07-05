@@ -26,16 +26,16 @@ def create_control_data():
     return control_group
 
 
-def print_treatment_plan(env, state_list, policy):
+def print_treatment_plan(env, policy, out_file = prm.POLICY_OUTPUT_FILE):
     policy_str = ''
-    for state_idx, action in policy.items():
-        if env.is_terminal_state(state):
+    state_list = env.get_state_space()
+    for state_idx, action in enumerate(policy):
+        if env.is_terminal_state(state_list[state_idx]):
             continue
-        policy_str += f'Under the Measurements:\n'
         state = state_list[state_idx]
         policy_str += f'Under the Measurements:\n'
         for idx, feature_value in enumerate(state):
             policy_str += f'\t\t{prm.FEATURES_IDX_TO_NAME[idx]} = {feature_value}\n'
         policy_str += f'{prm.ACTION_IDX_TO_NAME[int(action)]}\n\n'
-    with open(prm.POLICY_OUTPUT_FILE, prm.WRITE_FILE) as out_file:
-        out_file.write(policy_str)
+    with open(out_file, prm.WRITE_FILE) as my_file:
+        my_file.write(policy_str)
