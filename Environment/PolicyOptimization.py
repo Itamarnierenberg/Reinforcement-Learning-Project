@@ -18,7 +18,7 @@ def policy_evaluation(env, policy, discount_factor=prm.DISCOUNT_FACTOR, epsilon=
             for i in range(len(next_states)):
                 next_state_idx = state_to_idx_dict(next_states[i], state_list)
                 prob = env.transition_function(state, policy[state_idx], next_states[i], treatment_prob)
-                curr_value += prob * (rewards[i] + discount_factor * int(values[next_state_idx]))
+                curr_value += prob * (rewards[i] + discount_factor * values[next_state_idx])
             values[state_idx] = curr_value
             delta = np.max([delta, np.abs(old_values[state_idx] - values[state_idx])])
         if delta < epsilon:
@@ -30,9 +30,9 @@ def policy_iteration(env, initial_policy, discount_factor=prm.DISCOUNT_FACTOR, m
     policy = initial_policy
     num_iter = 0
     while True:
-        values = policy_evaluation(env, policy, treatment_prob = treatment_prob)
+        values = policy_evaluation(env, policy, treatment_prob)
         is_unchanged = True
-        # print(f'Iteration Number = {num_iter}')
+        print(f'Iteration Number = {num_iter}')
         for state in state_list:
             max_action_util = -math.inf
             max_action = None

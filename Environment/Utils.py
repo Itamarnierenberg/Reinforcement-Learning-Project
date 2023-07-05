@@ -4,6 +4,7 @@ import numpy as np
 from tqdm import tqdm
 from HazardEnv import HazardEnv
 from rich.traceback import install
+from datetime import datetime
 install()
 
 

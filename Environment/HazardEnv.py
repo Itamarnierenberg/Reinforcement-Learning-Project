@@ -45,7 +45,8 @@ class HazardEnv:
         return self.num_states
 
     def get_time(self):
-        return self.curr_time
+        raise NotImplementedError
+        # return self.curr_time
 
     def get_state_space(self):
         return self.state_space
@@ -98,7 +99,7 @@ class HazardEnv:
             new_state_left = np.max([state[idx] - feature['res'], feature['min_val']])
             new_state_right = np.min([state[idx] + feature['res'], feature['max_val']])
             feature_space_list.append([new_state_left, new_state_right])
-        feature_space_list.append([self.curr_time + 1])
+        feature_space_list.append([state[prm.TIME_IDX] + 1])
         next_states = list(itertools.product(*feature_space_list))
         return next_states
 
@@ -137,13 +138,15 @@ class HazardEnv:
             raise NotImplementedError
 
     def calc_reward(self, state_input=None):
+        time = self.curr_time
         if state_input is not None:
             state = state_input
+            time = state_input[prm.TIME_IDX]
         else:
             state = self.curr_state
         reward_arr = np.zeros(len(prm.FEATURES))
         for idx, feature in enumerate(prm.FEATURES):
-            control_mean = self.control_mean[self.curr_time][idx]
+            control_mean = self.control_mean[time][idx]
             if control_mean >= feature['max_val'] or control_mean <= feature['min_val']:
                 reward_arr[idx] = 1
             elif state[idx] >= feature['max_val'] or state[idx] <= feature['min_val']:
@@ -152,11 +155,11 @@ class HazardEnv:
                 hazard_ratio = HazardEnv.distance_func(state[idx], feature['max_val'], feature['min_val']) / \
                                 HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
                 if hazard_ratio > 1:
-                    reward_arr[idx] = 1
+                    reward_arr[idx] = 1/hazard_ratio
                 elif hazard_ratio == 1:
                     reward_arr[idx] = 0
                 else:
-                    reward_arr[idx] = -1
+                    reward_arr[idx] = -hazard_ratio
         return reward_arr
 
     def calculate_control_mean(self):
