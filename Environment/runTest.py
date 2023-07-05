@@ -9,7 +9,7 @@ from Utils import print_treatment_plan
 from PolicyOptimization import policy_evaluation, policy_iteration
 from rich.traceback import install
 import random
-
+from tqdm import tqdm
 
 install()
 
@@ -22,9 +22,9 @@ def run_td_exp(env, policy):
     plt.show()
 
 
-def run_policy_iteration(env, init_policy, treatment_prob=prm.TREATMENT_PROB, is_print = False):
-    optimal_policy = policy_iteration(env, init_policy, treatment_prob =treatment_prob)
-    if is_print:
+def run_policy_iteration(env, init_policy, treatment_prob=prm.TREATMENT_PROB, print = False):
+    optimal_policy = policy_iteration(env, init_policy, treatment_prob = treatment_prob)
+    if(print):
         print_treatment_plan(env, state_list, optimal_policy)
     return optimal_policy
 
@@ -32,7 +32,7 @@ def run_policy_iteration(env, init_policy, treatment_prob=prm.TREATMENT_PROB, is
 def run_big_experiment(init_policy, control_group, num_patients = 100, batch_num = 10):
     patients = []
     batch_size = int(num_patients/batch_num)
-    for batch in range(batch_num):
+    for batch in tqdm(range(batch_num)):
         patients.append([])
         for j in range(batch_size):
             patients[batch].append(HazardEnv(patient='Treatment', control_group=control_group))
@@ -59,20 +59,27 @@ def run_big_experiment(init_policy, control_group, num_patients = 100, batch_num
         total = 0
         for i in range(batch + 1):
             for patient in range(batch_size):
-                state_idx = state_to_idx_dict(patients[batch][patient].get_state())
-                patients[batch][patient].step(current_policy[state_idx])
-        #TODO update prob according to the old batches
-        current_prob =
-
+                if not patients[batch][patient].is_terminal_state():
+                    current_state = patients[batch][patient].get_state()
+                    curr_val = current_state[0]
+                    state_idx = state_to_idx_dict(current_state, state_list)
+                    patients[batch][patient].step(current_policy[state_idx])
+                    new_val = patients[batch][patient].get_state()[0]
+                    if new_val > curr_val:
+                        up = up + 1
+                    elif new_val < curr_val:
+                        down = down + 1
+                    else:
+                        stay = stay + 1
+                    total = total + 1
+        current_prob = [down/total, stay/total, up/total]
 
     return current_policy, current_prob
-
 
 def run_regular_experiment (init_policy, control_group):
     env = HazardEnv(patient='Treatment', control_group=control_group)
     optimal_policy = run_policy_iteration(env, init_policy)
     return optimal_policy
-
 
 
 if __name__ == '__main__':
@@ -82,7 +89,8 @@ if __name__ == '__main__':
     for state in state_list:
         init_policy[state_to_idx_dict(state, state_list)] = prm.TREATMENT_ACTION
     control_group = create_control_data()
-    valuated_policy, valuated_prob = run_big_experiment(init_policy, control_group, num_patients = 1000, batch_num = 100)
+    valuated_policy, valuated_prob = run_big_experiment(init_policy, control_group, num_patients = 100, batch_num = 10)
+    print('koko')
     print_treatment_plan(env, valuated_policy, out_file= './aprox_policy.txt')
     optimal_policy = run_regular_experiment(init_policy, control_group)
     print_treatment_plan(env, optimal_policy, out_file='./optimal_policy.txt')
@@ -106,5 +114,5 @@ if __name__ == '__main__':
 #     init_policy = np.zeros(env.get_num_states())
 #     for state in state_list:
 #         init_policy[state_to_idx_dict(state, env.get_state_space())] = prm.TREATMENT_ACTION
-#     optimal_policy = run_policy_iteration(env, init_policy, is_print=True)
+#     optimal_policy = run_policy_evaluation(env, init_policy)
 #     run_td_exp(env, optimal_policy)

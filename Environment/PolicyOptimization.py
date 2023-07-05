@@ -30,7 +30,7 @@ def policy_iteration(env, initial_policy, discount_factor=prm.DISCOUNT_FACTOR, m
     policy = initial_policy
     num_iter = 0
     while True:
-        values = policy_evaluation(env, policy, treatment_prob)
+        values = policy_evaluation(env, policy, treatment_prob=treatment_prob)
         is_unchanged = True
         print(f'Iteration Number = {num_iter}')
         for state in state_list:
