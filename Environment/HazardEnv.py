@@ -108,12 +108,15 @@ class HazardEnv:
         next_states = list(itertools.product(*feature_space_list))
         return next_states
 
-    def get_neighbors(self, state=None):
+    def get_neighbors(self, state=None, calc_rewards=True):
         if self.is_terminal_state(state):
             return [], []
         next_states = self.get_next_states(state)
-        rewards = [self.calc_reward(next_state) for next_state in next_states]
-        return next_states, rewards
+        if calc_rewards:
+            rewards = [self.calc_reward(next_state) for next_state in next_states]
+            return next_states, rewards
+        else:
+            return next_states
 
     def transition_function(self, state, action, next_state, treatment_prob=prm.TREATMENT_PROB):
         next_states, _ = self.get_neighbors(state)
@@ -162,9 +165,9 @@ class HazardEnv:
         for idx, feature in enumerate(prm.FEATURES):
             control_mean = self.control_mean[time][idx]
             if control_mean >= feature['max_val'] or control_mean <= feature['min_val']:
-                reward_arr[idx] = 1000
+                reward_arr[idx] = 1
             elif state[idx] >= feature['max_val'] or state[idx] <= feature['min_val']:
-                reward_arr[idx] = -1000
+                reward_arr[idx] = -1
             else:
                 hazard_ratio = HazardEnv.distance_func(state[idx], feature['max_val'], feature['min_val']) / \
                                 HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
@@ -219,7 +222,6 @@ class HazardEnv:
 
     def update_dist_params(self, new_dist_params):
         self.dist_params = new_dist_params
-
 
     def __str__(self):
         print_str = f'[INFO] Environment Information:\n'

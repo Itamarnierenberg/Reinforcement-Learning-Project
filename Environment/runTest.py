@@ -3,6 +3,7 @@ import numpy as np
 import Params as prm
 from HazardEnv import HazardEnv
 from CategoricalTD import categorical_td
+from MonteCarlo import my_monte_carlo
 from Utils import create_control_data
 from Utils import print_treatment_plan
 from Utils import print_learned_dist
@@ -10,16 +11,36 @@ from PolicyOptimization import policy_evaluation, policy_iteration, perform_inte
 from rich.traceback import install
 import random
 from tqdm import tqdm
+from datetime import datetime
+import os
 
 
 install()
 
 
-def run_td_exp(env, policy):
+def run_dist_exp(env, policy):
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
-    td_prob = categorical_td(env, policy, x_axis)
+    td_prob = categorical_td(env, policy)
+    mc_prob = my_monte_carlo(env, x_axis, policy)
+    state_idx = env.get_state_idx(env.get_start_state())
+    print(f'X Axis = {x_axis}')
+    print(f'TD Prob = {td_prob[state_idx]}')
+    print(f'MC Prob = {mc_prob}')
+    print(f'TD Sum = {np.sum(td_prob[state_idx])}')
+    print(f'MC Sum = {np.sum(mc_prob)}')
     print(td_prob[env.get_state_idx(env.get_start_state())])
-    plt.plot(x_axis, td_prob[env.get_state_idx(env.get_start_state())])
+    folder_name = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+    curr_dir = f'./results/{folder_name}'
+    os.mkdir(curr_dir)
+    plt.style.use("ggplot")
+    plt.figure()
+    plt.plot(x_axis, td_prob[state_idx], label='td_prob')
+    plt.plot(x_axis, mc_prob, label='mc_prob')
+    plt.ylabel('Probability')
+    plt.xlabel("Reward")
+    plt.title('TD/MC Reward Distribution Estimation')
+    plt.legend(loc='upper right')
+    plt.savefig(f'{curr_dir}/{prm.TD_MC_PLOT}')
     plt.show()
 
 
@@ -77,6 +98,7 @@ def run_big_experiment(init_policy, control_group, num_patients = 100, batch_num
 
     return current_policy, current_prob
 
+
 def run_regular_experiment (init_policy, control_group):
     env = HazardEnv(patient='Treatment', control_group=control_group)
     optimal_policy = run_policy_iteration(env, init_policy)
@@ -116,3 +138,4 @@ if __name__ == '__main__':
         print_learned_dist(env)
     print("done")
     # run_td_exp(env, optimal_policy)
+    run_dist_exp(env, optimal_policy)
