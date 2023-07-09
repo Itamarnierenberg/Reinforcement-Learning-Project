@@ -6,20 +6,22 @@ import itertools
 class HazardEnv:
 
     def __init__(self, patient, control_group=None):
+        feature_space_list = list()
+        for idx, feature in enumerate(prm.FEATURES):
+            feature_space_list.append(
+                np.arange(feature['min_val'], feature['max_val'] + feature['res'], feature['res']))
+        feature_space_list.append(np.arange(0, prm.HORIZON + 1, 1))
+        self.state_space = list(itertools.product(*feature_space_list))
+        self.num_states = len(self.state_space)
         if patient == 'Treatment':
             assert control_group is not None
             self.control_group = control_group
             self.control_mean = self.calculate_control_mean()
+            self.dist_params = np.zeros((self.num_states, self.num_states)) + 1/self.num_states
         elif patient != 'Control':
             print('Patient can be only Control or Treatment')
             raise NotImplementedError
-        feature_space_list = list()
-        for idx, feature in enumerate(prm.FEATURES):
-            feature_space_list.append(np.arange(feature['min_val'], feature['max_val'] + feature['res'], feature['res']))
-        feature_space_list.append(np.arange(0, prm.HORIZON + 1, 1))
-        self.state_space = list(itertools.product(*feature_space_list))
         self.patient = patient
-        self.num_states = len(self.state_space)
         self.start_state = np.zeros(len(prm.FEATURES) + 1)
         self.curr_state = np.zeros(len(prm.FEATURES) + 1)
         self.curr_time = 0
@@ -53,6 +55,9 @@ class HazardEnv:
 
     def get_history(self):
         return self.history
+
+    def get_dist_params(self):
+        return self.dist_params
 
     def is_terminal_state(self, state=None):
         if state is None:
@@ -98,7 +103,7 @@ class HazardEnv:
         for idx, feature in enumerate(prm.FEATURES):
             new_state_left = np.max([state[idx] - feature['res'], feature['min_val']])
             new_state_right = np.min([state[idx] + feature['res'], feature['max_val']])
-            feature_space_list.append([new_state_left, new_state_right])
+            feature_space_list.append([new_state_left, state[idx], new_state_right])
         feature_space_list.append([state[prm.TIME_IDX] + 1])
         next_states = list(itertools.product(*feature_space_list))
         return next_states
@@ -117,7 +122,15 @@ class HazardEnv:
         if action == prm.CONTROL_ACTION:
             prob_list = prm.CONTROL_PROB
         elif action == prm.TREATMENT_ACTION:
-            prob_list = treatment_prob
+            if prm.BAYES_MODE:
+                state_idx = self.get_state_idx(state)
+                next_state_idx = self.get_state_idx(next_state)
+                denum = np.sum(self.dist_params[state_idx, :])
+                if denum == 0:
+                    return 0
+                return self.dist_params[state_idx, next_state_idx] / np.sum(self.dist_params[state_idx, :])
+            else:
+                prob_list = treatment_prob
         else:
             raise NotImplementedError
         if state[prm.BODY_TEMP['idx']] < next_state[prm.BODY_TEMP['idx']]:
@@ -130,7 +143,8 @@ class HazardEnv:
     @staticmethod
     def distance_func(x, x_max, x_min):
         if prm.DISTANCE_FUNC == 'L1':
-            return np.min([np.abs(x - x_max), np.abs(x - x_min)])
+            min_list = np.array([np.abs(x - x_max), np.abs(x - x_min)])
+            return np.min(min_list)
 
         elif prm.DISTANCE_FUNC == 'L2':
             return np.min([np.abs(x - x_max), np.abs(x - x_min)])
@@ -148,18 +162,18 @@ class HazardEnv:
         for idx, feature in enumerate(prm.FEATURES):
             control_mean = self.control_mean[time][idx]
             if control_mean >= feature['max_val'] or control_mean <= feature['min_val']:
-                reward_arr[idx] = 1
+                reward_arr[idx] = 1000
             elif state[idx] >= feature['max_val'] or state[idx] <= feature['min_val']:
-                reward_arr[idx] = -5
+                reward_arr[idx] = -1000
             else:
                 hazard_ratio = HazardEnv.distance_func(state[idx], feature['max_val'], feature['min_val']) / \
                                 HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
                 if hazard_ratio > 1:
-                    reward_arr[idx] = 1/hazard_ratio
+                    reward_arr[idx] = hazard_ratio
                 elif hazard_ratio == 1:
                     reward_arr[idx] = 0
                 else:
-                    reward_arr[idx] = -hazard_ratio
+                    reward_arr[idx] = -(1/hazard_ratio)
         return reward_arr
 
     def calculate_control_mean(self):
@@ -175,6 +189,37 @@ class HazardEnv:
                 continue
             sum_arr[curr_time] = sum_arr[curr_time] / count_arr[curr_time]
         return sum_arr
+
+    def get_feature_map(self):
+        dim = (prm.NUM_FEATURES + 1) * prm.NUM_ACTIONS * (prm.NUM_FEATURES + 1)
+        feature_map = np.array((len(self.state_space), prm.NUM_ACTIONS, len(self.state_space), dim))
+        for state in self.state_space:
+            state_idx = self.get_state_idx(state)
+            for action in prm.ACTIONS:
+                for next_state in self.state_space:
+                    feature_vec = np.array(dim)
+                    next_state_idx = self.get_state_idx(next_state)
+                    moving_idx = 0
+                    for feature_idx, feature in enumerate(prm.FEATURES):
+                        feature_vec[moving_idx] = state[feature_idx]
+                        moving_idx += 1
+                    feature_vec[moving_idx] = state[prm.TIME_IDX]
+                    moving_idx += 1
+                    feature_vec[moving_idx] = action
+                    moving_idx += 1
+                    for feature_idx, feature in enumerate(prm.FEATURES):
+                        feature_vec[moving_idx] = next_state[feature_idx]
+                        moving_idx += 1
+                    feature_vec[moving_idx] = next_state[prm.TIME_IDX]
+                    feature_map[state_idx, action, next_state_idx] = feature_vec
+        return feature_map, dim
+
+    def get_state_idx(self, state):
+        return self.state_space.index(tuple(state))
+
+    def update_dist_params(self, new_dist_params):
+        self.dist_params = new_dist_params
+
 
     def __str__(self):
         print_str = f'[INFO] Environment Information:\n'

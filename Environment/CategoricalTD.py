@@ -1,7 +1,6 @@
 from tqdm import tqdm
 import Params as prm
 import numpy as np
-from Utils import state_to_idx_dict
 
 
 def categorical_td(env, policy, locations, step_size=prm.STEP_SIZE, num_epochs=prm.NUM_EPOCHS_TD, discount_factor=prm.DISCOUNT_FACTOR):
@@ -17,11 +16,11 @@ def categorical_td(env, policy, locations, step_size=prm.STEP_SIZE, num_epochs=p
         is_terminal = False
         step = 0
         while not is_terminal:
-            curr_state_idx = state_to_idx_dict(curr_state, env.get_state_space())
+            curr_state_idx = env.get_state_idx(curr_state)
             action = policy[curr_state_idx]
             next_state, reward, is_terminal = env.step(action)
             p_list = np.zeros(prm.X_AXIS_RESOLUTION)
-            next_state_idx = state_to_idx_dict(next_state, env.get_state_space())
+            next_state_idx = env.get_state_idx(next_state)
             for j in range(prm.X_AXIS_RESOLUTION):
                 if is_terminal:
                     g = reward
