@@ -114,4 +114,5 @@ if __name__ == '__main__':
     optimal_policy = run_policy_iteration(env, init_policy, is_print=True)
     if prm.BAYES_MODE:
         print_learned_dist(env)
+    print("done")
     # run_td_exp(env, optimal_policy)
