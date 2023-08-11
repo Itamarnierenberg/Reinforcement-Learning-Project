@@ -7,44 +7,50 @@ from MonteCarlo import my_monte_carlo
 from Utils import create_control_data
 from Utils import print_treatment_plan
 from Utils import print_learned_dist
+from Utils import create_treatment_prob
 from PolicyOptimization import policy_evaluation, policy_iteration, perform_interactions
 from rich.traceback import install
 import random
 from tqdm import tqdm
 from datetime import datetime
 import os
+import argparse
 
 
 install()
 
 
-def run_dist_exp(env, policy):
+def run_dist_exp(env, learned_policy, base_policy, seed):
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
-    td_prob = categorical_td(env, policy)
-    mc_prob = my_monte_carlo(env, x_axis, policy)
+    td_prob_opt = categorical_td(env, learned_policy)
+    mc_prob_opt = my_monte_carlo(env, x_axis, learned_policy)
+    td_prob_base = categorical_td(env, base_policy)
+    mc_prob_base = my_monte_carlo(env, x_axis, base_policy)
     state_idx = env.get_state_idx(env.get_start_state())
-    print(f'X Axis = {x_axis}')
-    print(f'TD Prob = {td_prob[state_idx]}')
-    print(f'MC Prob = {mc_prob}')
-    print(f'TD Sum = {np.sum(td_prob[state_idx])}')
-    print(f'MC Sum = {np.sum(mc_prob)}')
-    print(td_prob[env.get_state_idx(env.get_start_state())])
-    folder_name = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p")
+    # print(f'X Axis = {x_axis}')
+    # print(f'TD Prob = {td_prob[state_idx]}')
+    # print(f'MC Prob = {mc_prob}')
+    # print(f'TD Sum = {np.sum(td_prob[state_idx])}')
+    # print(f'MC Sum = {np.sum(mc_prob)}')
+    # print(td_prob[env.get_state_idx(env.get_start_state())])
+    folder_name = datetime.now().strftime("%Y_%m_%d-%I_%M_%S_%p") + f'_seed_{seed}'
     curr_dir = f'./results/{folder_name}'
     os.mkdir(curr_dir)
     plt.style.use("ggplot")
     plt.figure()
-    plt.plot(x_axis, td_prob[state_idx], label='td_prob')
-    plt.plot(x_axis, mc_prob, label='mc_prob')
+    plt.plot(x_axis, td_prob_opt[state_idx], label='td_prob_opt')
+    plt.plot(x_axis, mc_prob_opt, label='mc_prob_opt')
+    plt.plot(x_axis, td_prob_base[state_idx], label='td_prob_base')
+    plt.plot(x_axis, mc_prob_base, label='mc_prob_base')
     plt.ylabel('Probability')
     plt.xlabel("Reward")
-    plt.title('TD/MC Reward Distribution Estimation')
+    plt.title(f'TD/MC Reward Distribution Estimation, seed={seed}')
     plt.legend(loc='upper right')
     plt.savefig(f'{curr_dir}/{prm.TD_MC_PLOT}')
     plt.show()
 
 
-def run_policy_iteration(env, init_policy, treatment_prob=prm.TREATMENT_PROB, is_print=False):
+def run_policy_iteration(env, init_policy, treatment_prob, is_print=False):
     optimal_policy = policy_iteration(env, init_policy, treatment_prob=treatment_prob)
     if is_print:
         print_treatment_plan(env, optimal_policy)
@@ -121,21 +127,34 @@ def run_regular_experiment (init_policy, control_group):
 #     # run_td_exp(env, optimal_policy)
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        prog='runTest.py',
+        description='Running tests for the environment',
+    )
+    parser.add_argument('-a', '--algorithm', choices=['cat_td', 'mc', 'qlearn', 'policy_iter'])
+    parser.add_argument('-s', '--seed')
+    args = parser.parse_args()
+    rand_seed = 7
+    np.random.seed(rand_seed)
+    treatment_prob = create_treatment_prob()
+    print(f'Real Treatment prob = \n{treatment_prob}')
     control_group = create_control_data()
-    env = HazardEnv(patient='Treatment', control_group=control_group)
+    env = HazardEnv(patient='Treatment', control_group=control_group, real_treatment_prob=treatment_prob)
     state_list = env.get_state_space()
     num_states = env.get_num_states()
     print(f'Num States = {num_states}')
     init_policy = np.zeros(env.get_num_states())
+    base_policy = np.zeros(env.get_num_states())
     for state in state_list:
         init_policy[env.get_state_idx(state)] = prm.TREATMENT_ACTION
+        base_policy[env.get_state_idx(state)] = prm.CONTROL_ACTION
     for i in range(prm.SIZE_OF_ACTION_GROUP):
         env.reset()
         while not env.is_terminal:
             perform_interactions(env, init_policy)
-    optimal_policy = run_policy_iteration(env, init_policy, is_print=True)
+    optimal_policy = run_policy_iteration(env, init_policy, treatment_prob, is_print=True)
     if prm.BAYES_MODE:
         print_learned_dist(env)
     print("done")
     # run_td_exp(env, optimal_policy)
-    run_dist_exp(env, optimal_policy)
+    run_dist_exp(env, optimal_policy, base_policy, seed=rand_seed)

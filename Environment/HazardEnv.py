@@ -5,7 +5,7 @@ import itertools
 
 class HazardEnv:
 
-    def __init__(self, patient, control_group=None):
+    def __init__(self, patient, control_group=None, real_treatment_prob=None):
         feature_space_list = list()
         for idx, feature in enumerate(prm.FEATURES):
             feature_space_list.append(
@@ -18,6 +18,7 @@ class HazardEnv:
             self.control_group = control_group
             self.control_mean = self.calculate_control_mean()
             self.dist_params = np.zeros((self.num_states, self.num_states)) + 1/self.num_states
+            self.real_treatment_prob = real_treatment_prob
         elif patient != 'Control':
             print('Patient can be only Control or Treatment')
             raise NotImplementedError
@@ -72,11 +73,13 @@ class HazardEnv:
     def transition_model(self, action):
         new_state = np.zeros(len(prm.FEATURES) + 1)
         if action == prm.CONTROL_ACTION:
-            step_list = [-prm.FEATURES[0]['res'], 0, prm.FEATURES[0]['res']]
-            new_state[0] = self.curr_state[0] + np.random.choice(step_list, p=prm.CONTROL_PROB)     # What to do to Body Temperature Feature
+            for feature_idx in range(prm.NUM_FEATURES):
+                step_list = [-prm.FEATURES[feature_idx]['res'], 0, prm.FEATURES[feature_idx]['res']]
+                new_state[feature_idx] = self.curr_state[feature_idx] + np.random.choice(step_list, p=prm.CONTROL_PROB[feature_idx])     # What to do to Body Temperature Feature
         elif action == prm.TREATMENT_ACTION:
-            step_list = [-prm.FEATURES[0]['res'], 0, prm.FEATURES[0]['res']]
-            new_state[0] = self.curr_state[0] + np.random.choice(step_list, p=prm.TREATMENT_PROB)
+            for feature_idx in range(prm.NUM_FEATURES):
+                step_list = [-prm.FEATURES[feature_idx]['res'], 0, prm.FEATURES[feature_idx]['res']]
+                new_state[feature_idx] = self.curr_state[feature_idx] + np.random.choice(step_list, p=self.real_treatment_prob[feature_idx])
         else:
             raise NotImplementedError
         return new_state
@@ -118,7 +121,7 @@ class HazardEnv:
         else:
             return next_states
 
-    def transition_function(self, state, action, next_state, treatment_prob=prm.TREATMENT_PROB):
+    def transition_function(self, state, action, next_state, treatment_prob):
         next_states, _ = self.get_neighbors(state)
         if next_state not in next_states:
             return 0
@@ -136,12 +139,28 @@ class HazardEnv:
                 prob_list = treatment_prob
         else:
             raise NotImplementedError
-        if state[prm.BODY_TEMP['idx']] < next_state[prm.BODY_TEMP['idx']]:
-            return prob_list[2]
-        elif state[prm.BODY_TEMP['idx']] == next_state[prm.BODY_TEMP['idx']]:
-            return prob_list[1]
-        else:
-            return prob_list[0]
+        transition_prob = None
+        for feature in prm.FEATURES:
+            change_diff = state[feature['idx']] - next_state[feature['idx']]
+            if change_diff == feature['res']:
+                if transition_prob is None:
+                    transition_prob = prob_list[feature['idx']][0]
+                else:
+                    transition_prob *= prob_list[feature['idx']][0]
+            elif change_diff == 0:
+                if transition_prob is None:
+                    transition_prob = prob_list[feature['idx']][1]
+                else:
+                    transition_prob *= prob_list[feature['idx']][1]
+            elif change_diff == -feature['res']:
+                if transition_prob is None:
+                    transition_prob = prob_list[feature['idx']][2]
+                else:
+                    transition_prob *= prob_list[feature['idx']][2]
+            else:
+                raise ValueError(f'The feature {feature} increased or decreased by more then its resoultion in a single step.'
+                                 f'\n\n Current State = {state}, Next State = {next_state}, Change = {change_diff}')
+        return transition_prob
 
     @staticmethod
     def distance_func(x, x_max, x_min):
@@ -177,7 +196,7 @@ class HazardEnv:
                     reward_arr[idx] = 0
                 else:
                     reward_arr[idx] = -(1/hazard_ratio)
-        return reward_arr
+        return np.sum(reward_arr) / prm.NUM_FEATURES
 
     def calculate_control_mean(self):
         sum_arr = np.zeros((prm.HORIZON + 1, len(prm.FEATURES)))
@@ -233,3 +252,8 @@ class HazardEnv:
             print_str += f'[INFO] \t\tStart State = {self.start_state[idx]}\n'
             print_str += f'[INFO] \t\tCurrent State = {self.curr_state[idx]}\n'
         return print_str
+
+
+# stable-base-lines
+# LLMs
+# SARSA for exploration explotation

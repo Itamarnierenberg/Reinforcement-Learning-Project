@@ -7,9 +7,10 @@ from datetime import datetime
 install()
 
 
-def print_control_data (control_group):
+def print_control_data(control_group):
     for i in range(prm.SIZE_OF_CONTROL_GROUP):
-        print(f'Patient Number {i} Body Temp = {control_group[i][prm.BODY_TEMP["name"]]}')
+        for feature in prm.FEATURES:
+            print(f'Patient Number {i} Body Temp = {control_group[i][feature["name"]]}')
 
 
 def create_control_data():
@@ -36,10 +37,12 @@ def print_treatment_plan(env, policy, out_file=prm.POLICY_OUTPUT_FILE):
     with open(out_file, prm.WRITE_FILE) as my_file:
         my_file.write(policy_str)
 
-def find_reachable_states (env):
+
+def find_reachable_states(env):
     reachable_states = set()
     add_state(env, env.get_start_state(), reachable_states)
     return reachable_states
+
 
 def print_learned_dist(env, out_file=prm.PROB_OUPUT_FILE):
     prob_str = ''
@@ -48,12 +51,13 @@ def print_learned_dist(env, out_file=prm.PROB_OUPUT_FILE):
     for state in state_list:
         neighbors, _ = env.get_neighbors(state)
         for next_state in neighbors:
-            if (next_state not in reachable_states):
+            if next_state not in reachable_states:
                 continue
             prob_str += f'From {state} to {next_state}, Prob = {env.transition_function(state, prm.TREATMENT_ACTION, next_state, [])}\n'
             prob_str += '\n\n'
     with open(out_file, prm.WRITE_FILE) as my_file:
         my_file.write(prob_str)
+
 
 def add_state(env, curr_state, states):
     next_states = env.get_next_states(curr_state)
@@ -61,3 +65,11 @@ def add_state(env, curr_state, states):
         if not env.is_terminal_state(state) and state not in states:
             states.add(state)
             add_state(env, state, states)
+
+
+def create_treatment_prob():
+    treatment_prob = np.zeros((prm.NUM_FEATURES, 3))
+    for feature in range(prm.NUM_FEATURES):
+        treatment_prob[feature, :] = np.random.dirichlet(np.ones(3), 1)
+    return treatment_prob
+

@@ -4,7 +4,7 @@ import numpy as np
 import math
 
 
-def policy_evaluation(env, policy, discount_factor=prm.DISCOUNT_FACTOR, epsilon=0.01, treatment_prob=prm.TREATMENT_PROB) :
+def policy_evaluation(env, policy,treatment_prob, discount_factor=prm.DISCOUNT_FACTOR, epsilon=0.01):
     values = np.zeros(env.get_num_states())
     state_list = env.get_state_space()
     while True:
@@ -25,7 +25,7 @@ def policy_evaluation(env, policy, discount_factor=prm.DISCOUNT_FACTOR, epsilon=
 
 
 # Treatment prob is added because we dont know the real prob so we use the one we have at that moment
-def policy_iteration(env, initial_policy, discount_factor=prm.DISCOUNT_FACTOR, max_iter=prm.MAX_ITER, treatment_prob=prm.TREATMENT_PROB):
+def policy_iteration(env, initial_policy, treatment_prob, discount_factor=prm.DISCOUNT_FACTOR, max_iter=prm.MAX_ITER):
     state_list = env.get_state_space()
     policy = initial_policy
     num_iter = 0

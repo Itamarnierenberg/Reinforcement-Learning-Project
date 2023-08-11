@@ -1,15 +1,46 @@
+import numpy as np
 # Features Definition
 
-BODY_TEMP = {'idx': 0,
+# Body Temp
+FEATURE_1 = {'idx': 0,
              'min_val': 35.0,
              'max_val': 43.0,
              'res': 0.5,
              'start_state': 40.0}
 
-FEATURES = [BODY_TEMP]
+# Resting Pulse
+FEATURE_2 = {'idx': 1,
+             'min_val': 50,
+             'max_val': 170,
+             'res': 30,
+             'start_state': 80.0}
+# Fake
+FEATURE_3 = {'idx': 3,
+             'min_val': 1.0,
+             'max_val': 2.0,
+             'res': 0.1,
+             'start_state': 1.5}
+
+# Oxygen
+FEATURE_4 = {'idx': 3,
+             'min_val': 80.0,
+             'max_val': 95.0,
+             'res': 5,
+             'start_state': 92.0}
+
+# Respiratory
+FEATURE_5 = {'idx': 4,
+             'min_val': 8.0,
+             'max_val': 30.0,
+             'res': 5,
+             'start_state': 15.0}
+
+
+FEATURES = [FEATURE_1, FEATURE_2]#, FEATURE_3, FEATURE_4, FEATURE_5]
 NUM_FEATURES = len(FEATURES)
 
-FEATURES_IDX_TO_NAME = ['Body Temperature', 'Time']
+FEATURES_IDX_TO_NAME = [f'Feature {i}' for i in range(NUM_FEATURES)]
+FEATURES_IDX_TO_NAME.append('Time')
 
 # Actions Definition
 CONTROL_ACTION = 0
@@ -19,19 +50,23 @@ NUM_ACTIONS = len(ACTIONS)
 ACTION_IDX_TO_NAME = ["Don't take a pill", "Take a pill"]
 
 # Environment Params
-SIZE_OF_CONTROL_GROUP = 100
-SIZE_OF_ACTION_GROUP = 100
-HORIZON = 20
+SIZE_OF_CONTROL_GROUP = 2000
+SIZE_OF_ACTION_GROUP = 1000
+HORIZON = 1000
 DISTANCE_FUNC = 'L1'
-CONTROL_PROB = [0.8, 0.1, 0.1]
-TREATMENT_PROB = [0.1, 0.1, 0.8]
+CONTROL_PROB = np.array([[0.8, 0.1, 0.1],
+                         [0.8, 0.1, 0.1],
+                         [0.8, 0.1, 0.1],
+                         [0.8, 0.1, 0.1],
+                         [0.8, 0.1, 0.1]])
+# Randomize By Function TREATMENT_PROB = [0.1, 0.1, 0.8]
 TIME_IDX = -1
 
 # Policy Iteration Params
 MAX_ITER = 100
 
 # Categorical TD Params
-NUM_EPOCHS_TD = 5000
+NUM_EPOCHS_TD = 500
 STEP_SIZE = 0.1
 DISCOUNT_FACTOR = 0.99
 X_AXIS_LOWER_BOUND = -50
