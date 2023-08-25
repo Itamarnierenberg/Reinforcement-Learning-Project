@@ -8,7 +8,9 @@ from Utils import create_control_data
 from Utils import print_treatment_plan
 from Utils import print_learned_dist
 from Utils import create_treatment_prob
+from Utils import calc_kap_meier
 from PolicyOptimization import policy_evaluation, policy_iteration, perform_interactions
+from QLearning import q_learning
 from rich.traceback import install
 import random
 from tqdm import tqdm
@@ -18,6 +20,13 @@ import argparse
 
 
 install()
+
+
+def test_func(env, init_policy):
+    x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
+    my_q = q_learning(env, x_axis, init_policy)
+    print(my_q)
+
 
 
 def run_dist_exp(env, learned_policy, base_policy, seed):
@@ -156,5 +165,8 @@ if __name__ == '__main__':
     if prm.BAYES_MODE:
         print_learned_dist(env)
     print("done")
+    test_func(env, optimal_policy)
+    # calc_kap_meier(env, optimal_policy, base_policy, group_size=100, seed=rand_seed, group_name='Treatment')
+    exit(1)
     # run_td_exp(env, optimal_policy)
     run_dist_exp(env, optimal_policy, base_policy, seed=rand_seed)
