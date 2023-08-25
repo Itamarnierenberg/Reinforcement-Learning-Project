@@ -184,9 +184,9 @@ class HazardEnv:
         for idx, feature in enumerate(prm.FEATURES):
             control_mean = self.control_mean[time][idx]
             if control_mean >= feature['max_val'] or control_mean <= feature['min_val']:
-                reward_arr[idx] = 1
+                reward_arr[idx] = 100
             elif state[idx] >= feature['max_val'] or state[idx] <= feature['min_val']:
-                reward_arr[idx] = -1
+                reward_arr[idx] = -100
             else:
                 hazard_ratio = HazardEnv.distance_func(state[idx], feature['max_val'], feature['min_val']) / \
                                 HazardEnv.distance_func(control_mean, feature['max_val'], feature['min_val'])
