@@ -16,11 +16,11 @@ def q_learning(env, x_axis, policy, step_size=prm.STEP_SIZE, discount_factor=prm
     for epoch in tqdm(range(num_epochs), desc="QLearning:"):
         env.reset()
         curr_state = env.get_state()
-        curr_state_idx = env.get_state_idx(curr_state)
         is_terminal = False
         first_iter = True
         while not is_terminal:
-            action = policy(curr_state_idx)
+            curr_state_idx = env.get_state_idx(curr_state)
+            action = int(policy[curr_state_idx])
             next_state, reward, is_terminal = env.step(action)
             next_state_idx = env.get_state_idx(next_state)
             p_list = np.zeros(prm.X_AXIS_RESOLUTION)
@@ -43,6 +43,6 @@ def q_learning(env, x_axis, policy, step_size=prm.STEP_SIZE, discount_factor=prm
                     p_list[i_star + 1] += eta * q_func[next_state_idx, action, j]
             # Incremental Step
             for j in range(prm.X_AXIS_RESOLUTION):
-                q_func[curr_state, action, j] = (1 - step_size)*q_func[curr_state, action, j] + step_size*p_list[j]
+                q_func[curr_state_idx, action, j] = (1 - step_size)*q_func[curr_state_idx, action, j] + step_size*p_list[j]
             curr_state = next_state
     return q_func
