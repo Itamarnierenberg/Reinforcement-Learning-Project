@@ -127,3 +127,47 @@ def calc_kap_meier(env: HazardEnv, policy_opt, policy_ref, group_size, seed, plo
         plt.show()
     return kap_meier_opt, kap_meier_ref
 
+
+def calculate_exp (probabilities, values):
+    exp = 0
+    for index, prob in enumerate(probabilities):
+        exp = exp + values[index]*prob
+    return exp
+
+#this function get disribution and calculate the risk of it
+#assuming only one feature- body tmp
+def calculate_risk_measure (q_distribution, values, p=0.1):
+    sum = 0
+    #calculate the distribution of the risk random variable (lower tail)
+    for index, prob in enumerate(q_distribution):
+        sum= sum+prob
+        if (sum > p):
+            break
+    lower_risk_dist = [prob / 2*p for prob in q_distribution[:index]]
+    lower_risk_values = values[:index]
+    # calculate the expectation of that variable
+    # calculate the distribution of the risk random variable (upper tail)
+    sum = 0
+    for index, prob in enumerate(reversed(q_distribution)):
+        sum = sum + prob
+        if (sum > p):
+            break
+    higher_risk_dist = [prob/ 2*p for prob in q_distribution[len(q_distribution)-index-1:]]
+    higher_risk_values = values[len(q_distribution)-index-1:]
+    risk_dist = np.concatenate((lower_risk_dist,higher_risk_dist))
+    risk_values = np.concatenate((lower_risk_values, higher_risk_values))
+    print(risk_dist.sum())
+    #calculate the expectation of that variable
+    return calculate_exp(risk_dist, risk_values)
+
+
+
+
+
+
+
+
+
+
+
+

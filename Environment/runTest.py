@@ -8,6 +8,7 @@ from Utils import create_control_data
 from Utils import print_treatment_plan
 from Utils import print_learned_dist
 from Utils import create_treatment_prob
+from Utils import calculate_risk_measure
 from Utils import calc_kap_meier
 from PolicyOptimization import policy_evaluation, policy_iteration, perform_interactions
 from QLearning import q_learning
@@ -22,12 +23,27 @@ import argparse
 install()
 
 
+#this function is an experiment for risk averse method
 def test_func(env, init_policy):
+    #initialization
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
-    my_q = q_learning(env, x_axis, init_policy)
-    print(my_q)
+    curr_policy = init_policy
 
+    for epoch in tqdm(range(prm.NUM_EPOCHS_RA), desc="RiskAverse:"):
 
+        # fix q_learning. return value : 2*states_num distribtions
+        q = q_learning(env, x_axis, curr_policy)
+        for state in range(len(policy)):
+            max = -np.inf
+            action = None
+            for action in range(prm.NUM_ACTIONS):
+                current = my_q[index] + calculate_risk_measure(my_q[index], x_axis)
+                if (current > max):
+                    max = current
+                    chosen_action = action
+            # update best action according to the risk averse criteria
+            curr_policy[state] = chosen_action
+    return curr_policy
 
 def run_dist_exp(env, learned_policy, base_policy, seed):
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
@@ -167,6 +183,6 @@ if __name__ == '__main__':
     print("done")
     test_func(env, optimal_policy)
     # calc_kap_meier(env, optimal_policy, base_policy, group_size=100, seed=rand_seed, group_name='Treatment')
-    exit(1)
+    # exit(1)
     # run_td_exp(env, optimal_policy)
-    run_dist_exp(env, optimal_policy, base_policy, seed=rand_seed)
+    # run_dist_exp(env, optimal_policy, base_policy, seed=rand_seed)

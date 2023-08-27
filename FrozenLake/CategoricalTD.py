@@ -6,7 +6,6 @@ import numpy as np
 def categorical_td(env, policy, locations, initial_prob, step_size=STEP_SIZE, num_epochs=NUM_EPOCHS_TD, discount_factor=DISCOUNT_FACTOR):
     td_est_prob = initial_prob
     for epoch in tqdm(range(num_epochs)):
-        env.reset()
         curr_state = env.get_state()
         is_terminal = False
         while not is_terminal:

@@ -84,6 +84,9 @@ NUM_EPOCHS_UCRL = 100
 REG_PARAM = 0.2
 CONF_RAD = 1
 
+# Risk averse params
+NUM_EPOCHS_RA = 50000
+
 # File Settings
 POLICY_OUTPUT_FILE = './Policy.txt'
 PROB_OUPUT_FILE = './Prob.txt'

@@ -1,7 +1,7 @@
 from tqdm import tqdm
 import Params as prm
 import numpy as np
-
+import random
 
 def categorical_td(env, policy, step_size=prm.STEP_SIZE, num_epochs=prm.NUM_EPOCHS_TD, discount_factor=prm.DISCOUNT_FACTOR):
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
@@ -19,6 +19,10 @@ def categorical_td(env, policy, step_size=prm.STEP_SIZE, num_epochs=prm.NUM_EPOC
         step = 0
         while not is_terminal:
             curr_state_idx = env.get_state_idx(curr_state)
+            # epsilon greedy with epsilon=0.1
+            if (random.random() < 0.1):
+                action = random.radint(0,1)
+
             action = policy[curr_state_idx]
             next_state, reward, is_terminal = env.step(action)
             if reward > max_reward:
