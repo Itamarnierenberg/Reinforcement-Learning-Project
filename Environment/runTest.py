@@ -24,7 +24,7 @@ install()
 
 
 #this function is an experiment for risk averse method
-def test_func(env, init_policy):
+def test_func(env, init_policy, alpha=0.3):
     #initialization
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
     curr_policy = init_policy
@@ -37,7 +37,7 @@ def test_func(env, init_policy):
             max = -np.inf
             action = None
             for action in range(prm.NUM_ACTIONS):
-                current = my_q[index] + calculate_risk_measure(my_q[index], x_axis)
+                current = alpha*my_q[index] + (1-alpha)*calculate_risk_measure(my_q[index], x_axis)
                 if (current > max):
                     max = current
                     chosen_action = action
