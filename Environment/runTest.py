@@ -8,7 +8,6 @@ from Utils import create_control_data
 from Utils import print_treatment_plan
 from Utils import print_learned_dist
 from Utils import create_treatment_prob
-from Utils import calculate_risk_measure
 from Utils import calc_kap_meier
 from PolicyOptimization import policy_evaluation, policy_iteration, perform_interactions
 from QLearning import q_learning
@@ -30,7 +29,6 @@ def test_func(env, init_policy, alpha=0.3):
     curr_policy = init_policy
 
     for epoch in tqdm(range(prm.NUM_EPOCHS_RA), desc="RiskAverse:"):
-
         # fix q_learning. return value : 2*states_num distribtions
         q = q_learning(env, x_axis, curr_policy)
         for state in range(len(policy)):
@@ -45,9 +43,12 @@ def test_func(env, init_policy, alpha=0.3):
             curr_policy[state] = chosen_action
     return curr_policy
 
-def run_dist_exp(env, learned_policy, base_policy, seed):
+def run_dist_exp(env, learned_policy, base_policy, seed, with_q=False):
     x_axis = np.linspace(prm.X_AXIS_LOWER_BOUND, prm.X_AXIS_UPPER_BOUND, prm.X_AXIS_RESOLUTION)
     td_prob_opt = categorical_td(env, learned_policy)
+    if with_q:
+        q_prob_opt = q_learning(env, x_axis, learned_policy)
+        q_prob_base = q_learning(env, x_axis, base_policy)
     mc_prob_opt = my_monte_carlo(env, x_axis, learned_policy)
     td_prob_base = categorical_td(env, base_policy)
     mc_prob_base = my_monte_carlo(env, x_axis, base_policy)
@@ -67,6 +68,9 @@ def run_dist_exp(env, learned_policy, base_policy, seed):
     plt.plot(x_axis, mc_prob_opt, label='mc_prob_opt')
     plt.plot(x_axis, td_prob_base[state_idx], label='td_prob_base')
     plt.plot(x_axis, mc_prob_base, label='mc_prob_base')
+    if with_q:
+        plt.plot(x_axis, q_prob_opt[state_idx][learned_policy[state_idx]], label='q_prob_opt')
+        plt.plot(x_axis, q_prob_base[state_idx][learned_policy[state_idx]], label='q_prob_base')
     plt.ylabel('Probability')
     plt.xlabel("Reward")
     plt.title(f'TD/MC Reward Distribution Estimation, seed={seed}')
@@ -185,4 +189,4 @@ if __name__ == '__main__':
     # calc_kap_meier(env, optimal_policy, base_policy, group_size=100, seed=rand_seed, group_name='Treatment')
     # exit(1)
     # run_td_exp(env, optimal_policy)
-    # run_dist_exp(env, optimal_policy, base_policy, seed=rand_seed)
+    run_dist_exp(env, optimal_policy, base_policy, seed=rand_seed, with_q=True)
