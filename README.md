@@ -1,4 +1,4 @@
-<h2 align="center">Reinforcement Learning Project
+<h2 align="center">Optimizing The Hazard Ratio
 </h2> 
 <p align="center">
 <img src="images/ProjectHeader.png" width="800" height="300" />
@@ -17,23 +17,51 @@
     <a href="https://github.com/stavbeno/"><img src="./images/GitHubLogo.png" width="40" height="40"/></a>
 </a>
 
-This project's goal is to optimize a policy for the Hazard Ratio metric using Bayesian methods
+This project's goal is to optimize a policy for the Hazard Ratio metric using Advanced RL and Bayesian methods
 
 Table Of Contents
 --
 * [Background](#background)
 * [File Tree](#file-tree)
 * [Refrences](#refrences)
+* [Environment](#environment)
 
 ## Background
-This project aims to optimize a policy that minimizes the hazard ratio 
+In medical research there is a common problem of learning a policy to act with during a medical trial such that we maximize the patients probability to improve their initial condition throughout all the trial in relative to a control group.
+The mathematical formulation of this risk is the Hazard Ratio.
+Optimizing this metric using little data and realistic assumptions can prove useful in the medical field along with many other possible implementations.
 
 ## File Tree
-| File Name                            | Purpose |
-|--------------------------------------|---------|
-| `CategoricalTD.py`                   |         |
-| `HazardEnv.py`                       |         |
-| `Params.py`                          |         |
-| `PolicyOptimization.py`              |         |
-| `runTest.py`                         |         |
-| `Utils.py`                           |         |
+This repository consists of two major folders:
+* Environment - Our own implementation of the envrionment without the use of external packages
+* DQN - Our in environment in gymnasium, using DQN to learn a policy
+
+### Environment
+
+| File Name                           | Purpose                                              |
+|-------------------------------------|------------------------------------------------------|
+| `Environment/CategoricalTD.py`      | This file implements the Distributional TD Learning  |
+| `Environment/MonteCarlo.py`         | Implements Monte Carlo value distribution estimation |
+| `Environment/QLearning.py`          | Q-Learning distributional version                    |
+| `Environment/HazardEnv.py`          | This is the class implementing the environment       |
+| `Environment/Params.py`             | Configuration file                                   |
+| `Environment/PolicyOptimization.py` | Vanilla optimization algorithms (Policy Iteration)   |
+| `Environment/runTest.py`            | Main file used to run experiments                    |
+| `Environment/Utils.py`              | Utility functions                                    |
+
+### DQN
+
+| File Name                   | Purpose                                               |
+|-----------------------------|-------------------------------------------------------|
+| `DQN/DQN.py`                | The DQN class                                         |
+| `DQN/Patients.py`           | Gymnasium implementation of the environment           |
+| `DQN/ReplayMemory.py`       | Used for training                                     |
+| `DQN/TestDQN.py`            | This file contains the training functions for the DQN |
+| `DQN/Params.py`             | Configuration file                                    |
+| `DQNs/Utils.py`             | Utility functions                                     |
+
+## Environment
+
+Each patient consists of N measurements, each measurement assign with a lower bound, upper bound and a starting state.
+Mathematical Formulation:
+* $$  $$
