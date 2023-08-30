@@ -63,5 +63,13 @@ This repository consists of two major folders:
 ## Environment
 
 Each patient consists of N measurements, each measurement assign with a lower bound, upper bound and a starting state.
-Mathematical Formulation:
-* $$  $$
+
+* States = A tuple where the i'th element is the i'th measurement current value
+* Actions = Control or Treatment X Dosage
+* Transition Model = Known and constant for the Control Group, unknown and estimated using Bayesian methods for the treatment group
+
+## Testing
+
+We start by simulating a control group consisting of N patients.
+Then randomize probabilities for the current treatment, at each fixed number of steps for each patient we will stop and perform policy optimzations
+with respect to the most recent data we have gathered in the previous steps. At each step the probability estimations will also update.
