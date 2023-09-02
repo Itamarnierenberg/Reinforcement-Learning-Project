@@ -11,8 +11,8 @@ def q_learning(env, x_axis, policy, step_size=prm.STEP_SIZE, discount_factor=prm
     for state in tqdm(range(num_states), desc="Initializing Uniformly Distributed Q Function"):
         for action in range(prm.NUM_ACTIONS):
             for pos_reward in range(prm.X_AXIS_RESOLUTION):
-                q_func[state][action][pos_reward] = 1/prm.X_AXIS_RESOLUTION
-                mc_prob[state][action][pos_reward] = 1/prm.X_AXIS_RESOLUTION
+                q_func[state, action, pos_reward] = 1/prm.X_AXIS_RESOLUTION
+                mc_prob[state, action, pos_reward] = 1/prm.X_AXIS_RESOLUTION
     for epoch in tqdm(range(num_epochs), desc="QLearning:"):
         env.reset()
         curr_state = env.get_state()
@@ -38,6 +38,8 @@ def q_learning(env, x_axis, policy, step_size=prm.STEP_SIZE, discount_factor=prm
                     i_star = 0
                     while x_axis[i_star + 1] <= g:
                         i_star += 1
+                        if i_star == len(x_axis) - 1:
+                            break
                     eta = (g - x_axis[i_star]) / (x_axis[i_star + 1] - x_axis[i_star])
                     p_list[i_star] += (1 - eta) * q_func[next_state_idx, action, j]
                     p_list[i_star + 1] += eta * q_func[next_state_idx, action, j]
